@@ -1,0 +1,5 @@
+exe 파일 생성
+go build
+
+실행
+go run main
