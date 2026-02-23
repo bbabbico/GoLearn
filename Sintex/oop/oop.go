@@ -16,6 +16,8 @@ type Circle struct {
 	Radius float64
 }
 
+// struct{} - 이건 메모리를 사용하지 않는 빈 구조체. 채널의 신호전달용으로 사용됨.
+
 type Person struct {
 	Name string
 	Age  int

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"awesomeGO/native"
+	"awesomeGO/Sintex/native"
 	"fmt"
 )
 
