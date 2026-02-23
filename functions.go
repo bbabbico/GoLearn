@@ -66,7 +66,7 @@ func main() {
 	c := counter()             //익명함수
 	fmt.Println(c(), c(), c()) // 1 2 3
 
-	func(a, b int) int { // 이거를 파라미터로 넘기는것도 가능
+	func(a, b int) int { // 익명함수 이거를 파라미터로 넘기는것도 가능 앞에 go 붙이면 고루틴 생성됨
 		return a + b
 	}(3, 5) // 정의 후 바로 호출
 

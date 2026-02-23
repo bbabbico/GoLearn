@@ -3,3 +3,6 @@ go build
 
 실행
 go run main
+
+Race Detector (동기화 문제 확인)
+go run -race 파일.go
