@@ -6,9 +6,45 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+/*
+// 성공
+c.JSON(http.StatusOK, data)             // 200 - 조회 성공
+c.JSON(http.StatusCreated, data)        // 201 - 생성 성공
+c.JSON(http.StatusNoContent, nil)       // 204 - 삭제 성공 (본문 없음)
+
+// 클라이언트 오류
+c.JSON(http.StatusBadRequest, err)      // 400 - 잘못된 요청
+c.JSON(http.StatusUnauthorized, err)    // 401 - 인증 필요
+c.JSON(http.StatusForbidden, err)       // 403 - 권한 없음
+c.JSON(http.StatusNotFound, err)        // 404 - 리소스 없음
+
+// 서버 오류
+c.JSON(http.StatusInternalServerError, err) // 500 - 서버 오류
+*/
+
 type CreateUserRequest struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
+}
+
+type User struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Password  string `json:"-"` // JSON 응답에서 제외
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at,omitempty"` // JSON 빈 값이면 제외
+}
+
+type Address struct {
+	City    string `json:"city"`
+	Country string `json:"country"`
+}
+
+type User1 struct {
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Address Address `json:"address"`
 }
 
 func main() {
@@ -31,13 +67,92 @@ func main() {
 		page := c.DefaultQuery("page", "1")
 		limit := c.DefaultQuery("limit", "10")
 
-		c.JSON(http.StatusOK, gin.H{ //c.JSON 는 첫번째 인자는 HTTP 상태 코드, 두번쨰는 응답 본문. - gin.H는 map[string]any의 별칭 JSON 객체 편하게 만들 수 있게 해줌
-			"message":    "Hello, Gin!",
+		c.JSON(http.StatusOK, gin.H{ //c.JSON 는 첫번째 인자는 HTTP 상태 코드, 두번쨰는 응답 본문. - gin.H는 map[string]any의 별칭 JSON 객체 편하게 만들 수 있게 해줌 map[string]any{"name": "Alice"} 이거랑 같음
+			"message":    "Hello, Gin!", // 그냥 구조체로 받을 수도 있음 ex) c.JSON(http.StatusOK, gin.H{CreateUserRequest}
 			"keyword":    keyword,
 			"page":       page,
 			"limit":      limit,
 			"categories": categories,
 			"config":     config,
+		})
+	})
+
+	// 중첩 구조체
+	r.GET("/users/:id", func(c *gin.Context) {
+		user := User1{
+			ID:   1,
+			Name: "Alice",
+			Address: Address{ //중첩 구조체
+				City:    "Seoul",
+				Country: "Korea",
+			},
+		}
+
+		c.JSON(http.StatusOK, user)
+	})
+	/* 응답 결과
+	{
+	  "id": 1,
+	  "name": "Alice",
+	  "address": {
+	    "city": "Seoul",
+	    "country": "Korea"
+	  }
+	}
+	*/
+
+	type User2 struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	// 목록 반환 슬라이스
+	r.GET("/users", func(c *gin.Context) {
+		users := []User2{
+			{ID: 1, Name: "Alice"},
+			{ID: 2, Name: "Bob"},
+			{ID: 3, Name: "Charlie"},
+		}
+
+		c.JSON(http.StatusOK, users)
+	})
+	/*
+		[
+		  {"id": 1, "name": "Alice"},
+		  {"id": 2, "name": "Bob"},
+		  {"id": 3, "name": "Charlie"}
+		]
+
+	*/
+
+	//배열 반환시 JSON 하이체킹 방지 응답은 JSON 배열 그대로 반환하면 털림. 객체로 감사서 "data" : [] 이런식으로 해야함
+	r.GET("/data", func(c *gin.Context) {
+		c.SecureJSON(http.StatusOK, []string{"a", "b", "c"})
+	})
+
+	// JSON HTML 이스케이프 후 반환
+	r.GET("/json", func(c *gin.Context) {
+		c.JSON(200, gin.H{"html": "<b>Hello</b>"})
+	})
+
+	// JSON 원본 반환
+	r.GET("/purejson", func(c *gin.Context) {
+		c.PureJSON(200, gin.H{"html": "<b>Hello</b>"})
+	})
+	/*
+		c.JSON()
+		{"html":"\u003cb\u003eHello\u003c/b\u003e"} HTML 이스케이프 함
+
+		c.PureJSON()
+		{"html":"<b>Hello</b>"} HTML 이스케이프 안하고 원본 그대로 줌
+	*/
+
+	// 템플릿 로드
+	r.LoadHTMLGlob("html/*")
+
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", gin.H{ // c.HTML 은 HTML 반환함. html 안의 {{ .title }} 요소로 변수 설정 가능
+			"title": "홈페이지",
 		})
 	})
 
