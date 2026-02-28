@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,6 +51,9 @@ type User1 struct {
 func main() {
 	// Gin 라우터 생성
 	r := gin.Default() //Default()는 기본 미들웨어인 Logger와 Recovery가 포함된 라우터를 반환.
+
+	// 업로드 파일 크기 제한 (8MB)
+	r.MaxMultipartMemory = 8 << 20
 
 	// GET / 요청 처리
 	r.GET("/g", func(c *gin.Context) { // GET 핸들러 함수, *gin.Context 가 요청 정보와 응답 매서드 가지고 있음.
@@ -124,6 +128,28 @@ func main() {
 		]
 
 	*/
+	r.POST("/upload", func(c *gin.Context) {
+		// 폼에서 파일 가져오기
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 파일 저장
+		filename := filepath.Base(file.Filename)
+		dst := "./uploads/" + filename
+
+		if err := c.SaveUploadedFile(file, dst); err != nil { // SaveUploadedFile : 파일 저장함수
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"filename": filename,
+			"size":     file.Size,
+		})
+	})
 
 	//배열 반환시 JSON 하이체킹 방지 응답은 JSON 배열 그대로 반환하면 털림. 객체로 감사서 "data" : [] 이런식으로 해야함
 	r.GET("/data", func(c *gin.Context) {
