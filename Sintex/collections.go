@@ -4,7 +4,7 @@ import "fmt"
 
 func main() {
 	// 배열 — 고정 길이
-	var arr [3]int = [3]int{10, 20, 30}
+	var arr = [3]int{10, 20, 30}
 	fmt.Println(arr[0]) // 10
 
 	// 슬라이스 — 동적 배열, Go에서 가장 많이 쓰임
