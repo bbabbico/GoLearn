@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go database/sql × MySQL — 완전 가이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #0f1525;
+    --bg3: #141c2e;
+    --panel: #192135;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7b5ea7;
+    --accent3: #ff6b6b;
+    --go-blue: #00acd7;
+    --go-teal: #5dc9e2;
+    --mysql-orange: #f0942b;
+    --text: #e2e8f4;
+    --text-muted: #7a8ba8;
+    --text-dim: #4a5a72;
+    --code-bg: #0d1626;
+    --code-string: #98c379;
+    --code-keyword: #c678dd;
+    --code-func: #61afef;
+    --code-comment: #5c6370;
+    --code-number: #d19a66;
+    --code-type: #e5c07b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0;
+    width: 260px; height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+    padding: 0 0 40px;
+  }
+
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-logo .lang-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    color: var(--go-blue);
+    background: rgba(0, 172, 215, 0.1);
+    border: 1px solid rgba(0, 172, 215, 0.3);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .sidebar-logo h1 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .sidebar-logo p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .nav-section {
+    padding: 0 12px 8px;
+  }
+
+  .nav-section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 8px 6px;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .nav-link:hover {
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  .nav-link.active {
+    background: rgba(0, 212, 255, 0.08);
+    color: var(--accent);
+    border-left: 2px solid var(--accent);
+  }
+
+  .nav-link .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    min-width: 16px;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 260px;
+    min-height: 100vh;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    padding: 80px 80px 60px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,172,215,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; left: 200px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(123,94,167,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  .badge-go {
+    color: var(--go-blue);
+    background: rgba(0,172,215,0.1);
+    border: 1px solid rgba(0,172,215,0.25);
+  }
+
+  .badge-mysql {
+    color: var(--mysql-orange);
+    background: rgba(240,148,43,0.1);
+    border: 1px solid rgba(240,148,43,0.25);
+  }
+
+  .badge-v {
+    color: var(--text-muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+  }
+
+  .hero h1 {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 .hl-go { color: var(--go-teal); }
+  .hero h1 .hl-sql { color: var(--accent); }
+  .hero h1 .hl-mysql { color: var(--mysql-orange); }
+
+  .hero-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    max-width: 600px;
+    line-height: 1.8;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ── CONTENT ── */
+  .content {
+    padding: 0 80px 100px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    padding-top: 64px;
+    border-top: 1px solid var(--border);
+    margin-top: 64px;
+  }
+
+  .section:first-child { border-top: none; margin-top: 40px; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .section-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .section-title .accent { color: var(--accent); }
+
+  .sub-section {
+    margin-top: 40px;
+  }
+
+  .sub-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--go-teal);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sub-title::before {
+    content: '▸';
+    color: var(--accent2);
+    font-size: 12px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.9;
+    color: #c8d4e8;
+    margin-bottom: 14px;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    position: relative;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0 24px;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+
+  .code-filename {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg3);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  pre {
+    padding: 20px 20px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.85;
+    tab-size: 4;
+  }
+
+  /* Syntax highlight classes */
+  .kw { color: var(--code-keyword); font-weight: 500; }
+  .fn { color: var(--code-func); }
+  .st { color: var(--code-string); }
+  .cm { color: var(--code-comment); font-style: italic; }
+  .nm { color: var(--code-number); }
+  .tp { color: var(--code-type); }
+  .pk { color: #e06c75; }
+  .vr { color: var(--text); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+
+  .callout-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .callout.info {
+    background: rgba(0, 212, 255, 0.05);
+    border-left: 3px solid var(--accent);
+    color: #a8c4d8;
+  }
+
+  .callout.warn {
+    background: rgba(240, 148, 43, 0.05);
+    border-left: 3px solid var(--mysql-orange);
+    color: #d4b898;
+  }
+
+  .callout.danger {
+    background: rgba(255, 107, 107, 0.05);
+    border-left: 3px solid var(--accent3);
+    color: #d4a0a0;
+  }
+
+  .callout.success {
+    background: rgba(152, 195, 121, 0.05);
+    border-left: 3px solid #98c379;
+    color: #a8c4a0;
+  }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead tr {
+    background: var(--panel);
+  }
+
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(30, 45, 69, 0.5);
+    color: #c0ccdc;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: rgba(20, 28, 46, 0.4); }
+
+  td code, p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  /* ── GRID CARDS ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: var(--accent2); }
+
+  .card-icon { font-size: 20px; margin-bottom: 10px; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .card-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.7; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .flow-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .flow-box.accent { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
+  .flow-box.orange { border-color: var(--mysql-orange); color: var(--mysql-orange); background: rgba(240,148,43,0.05); }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 18px;
+    padding: 0 6px;
+  }
+
+  /* ── LIST ── */
+  ul.styled, ol.styled {
+    padding-left: 4px;
+    list-style: none;
+    margin: 12px 0 20px;
+  }
+
+  ul.styled li {
+    padding: 5px 0 5px 20px;
+    position: relative;
+    font-size: 13.5px;
+    color: #c0ccdc;
+    line-height: 1.7;
+  }
+
+  ul.styled li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--accent2);
+    font-weight: 700;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 32px 0;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-left: 260px;
+    border-top: 1px solid var(--border);
+    padding: 24px 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .footer a { color: var(--go-blue); text-decoration: none; }
+
+  /* ── HIGHLIGHT LINE ── */
+  .hl-line {
+    display: inline-block;
+    background: rgba(0,212,255,0.07);
+    border-radius: 2px;
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .main, .footer { margin-left: 200px; }
+    .hero, .content { padding-left: 32px; padding-right: 32px; }
+    .hero h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="lang-badge">⬡ Go × MySQL</div>
+    <h1>database/sql<br>완전 가이드</h1>
+    <p>All-in-one Reference</p>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title">시작하기</div>
+    <a class="nav-link active" href="#intro"><span class="num">01</span> 개요 및 아키텍처</a>
+    <a class="nav-link" href="#install"><span class="num">02</span> 설치 및 연결</a>
+    <a class="nav-link" href="#pool"><span class="num">03</span> 커넥션 풀 설정</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title">쿼리 작업</div>
+    <a class="nav-link" href="#query"><span class="num">04</span> SELECT 쿼리</a>
+    <a class="nav-link" href="#exec"><span class="num">05</span> INSERT / UPDATE / DELETE</a>
+    <a class="nav-link" href="#prepared"><span class="num">06</span> Prepared Statement</a>
+    <a class="nav-link" href="#named"><span class="num">07</span> Named Parameter</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title">고급 기능</div>
+    <a class="nav-link" href="#tx"><span class="num">08</span> 트랜잭션</a>
+    <a class="nav-link" href="#nulls"><span class="num">09</span> NULL 처리</a>
+    <a class="nav-link" href="#rows"><span class="num">10</span> Row 스캔 패턴</a>
+    <a class="nav-link" href="#ctx"><span class="num">11</span> Context & 타임아웃</a>
+    <a class="nav-link" href="#error"><span class="num">12</span> 에러 처리</a>
+    <a class="nav-link" href="#best"><span class="num">13</span> Best Practices</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span class="badge badge-go">Go 1.21+</span>
+      <span class="badge badge-mysql">MySQL 8.0</span>
+      <span class="badge badge-v">go-sql-driver v1.7</span>
+    </div>
+    <h1>
+      <span class="hl-go">Go</span> <span class="hl-sql">database/sql</span><br>
+      <span class="hl-mysql">MySQL</span> 완전 가이드
+    </h1>
+    <p class="hero-desc">
+      Go 표준 라이브러리 <code>database/sql</code>을 사용하여 MySQL과 연동하는
+      모든 기법을 다룹니다. 커넥션 풀부터 트랜잭션, NULL 처리, Context 기반
+      타임아웃까지 실무에서 바로 쓸 수 있는 코드 예제와 함께 설명합니다.
+    </p>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-val">13</span><span class="stat-label">섹션</span></div>
+      <div class="stat"><span class="stat-val">40+</span><span class="stat-label">코드 예제</span></div>
+      <div class="stat"><span class="stat-val">100%</span><span class="stat-label">표준 라이브러리 기반</span></div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- 01. 개요 -->
+    <div class="section" id="intro">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">개요 및 <span class="accent">아키텍처</span></h2>
+      </div>
+
+      <p>
+        Go의 <code>database/sql</code> 패키지는 SQL 데이터베이스를 위한 범용 인터페이스를 제공합니다.
+        패키지 자체는 특정 데이터베이스에 종속되지 않으며, 드라이버(driver)를 통해 실제 DB와 통신합니다.
+        MySQL 연동을 위해서는 <code>go-sql-driver/mysql</code> 드라이버를 함께 사용합니다.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">🔌</div>
+          <div class="card-title">드라이버 인터페이스</div>
+          <div class="card-desc"><code>database/sql/driver</code> 인터페이스를 구현한 드라이버를 blank import로 등록합니다.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏊</div>
+          <div class="card-title">자동 커넥션 풀</div>
+          <div class="card-desc">sql.DB는 내부적으로 커넥션 풀을 관리합니다. 쿼리마다 커넥션을 열고 닫을 필요가 없습니다.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <div class="card-title">고루틴 안전</div>
+          <div class="card-desc">sql.DB는 여러 고루틴에서 동시에 안전하게 사용할 수 있습니다. 전역 변수로 선언해 재사용합니다.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <div class="card-title">표준 인터페이스</div>
+          <div class="card-desc">동일한 코드로 MySQL, PostgreSQL, SQLite 등 드라이버만 교체해 DB를 전환할 수 있습니다.</div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">아키텍처 흐름</div>
+        <div class="flow">
+          <div class="flow-box accent">Your App</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">database/sql</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">go-sql-driver</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box orange">MySQL Server</div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">핵심 타입 구조</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>타입</th><th>설명</th><th>특이사항</th></tr></thead>
+            <tbody>
+              <tr><td><code>*sql.DB</code></td><td>데이터베이스 핸들, 커넥션 풀 관리</td><td>고루틴 안전, 프로그램 전역 재사용</td></tr>
+              <tr><td><code>*sql.Rows</code></td><td>SELECT 결과 커서</td><td>반드시 <code>defer rows.Close()</code> 필요</td></tr>
+              <tr><td><code>*sql.Row</code></td><td>단일 행 결과</td><td><code>Scan()</code> 시 에러 반환</td></tr>
+              <tr><td><code>*sql.Stmt</code></td><td>Prepared Statement</td><td>재사용 시 성능 향상</td></tr>
+              <tr><td><code>*sql.Tx</code></td><td>트랜잭션 객체</td><td>Commit/Rollback 필수</td></tr>
+              <tr><td><code>sql.Result</code></td><td>INSERT/UPDATE/DELETE 결과</td><td>LastInsertId, RowsAffected</td></tr>
+              <tr><td><code>sql.NullString</code></td><td>NULL 가능 문자열</td><td>Valid 필드로 NULL 여부 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02. 설치 및 연결 -->
+    <div class="section" id="install">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">설치 및 <span class="accent">연결</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">드라이버 설치</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">terminal</span>
+            <span class="code-lang">bash</span>
+          </div>
+          <pre><span class="cm"># go-sql-driver/mysql 설치</span>
+go get -u github.com/go-sql-driver/mysql
+
+<span class="cm"># go.mod 확인</span>
+go mod tidy</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">기본 연결</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">main.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">package</span> <span class="pk">main</span>
+
+<span class="kw">import</span> (
+    <span class="st">"database/sql"</span>
+    <span class="st">"fmt"</span>
+    <span class="st">"log"</span>
+
+    <span class="cm">// 드라이버를 blank import로 등록 (init() 함수 실행)</span>
+    _ <span class="st">"github.com/go-sql-driver/mysql"</span>
+)
+
+<span class="kw">var</span> <span class="vr">db</span> *<span class="tp">sql.DB</span>
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> <span class="vr">err</span> <span class="tp">error</span>
+
+    <span class="cm">// DSN 형식: user:password@tcp(host:port)/dbname?params</span>
+    <span class="vr">dsn</span> := <span class="st">"root:password@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4&parseTime=True&loc=Local"</span>
+
+    <span class="cm">// sql.Open은 실제 연결하지 않고 DB 핸들만 생성</span>
+    <span class="vr">db</span>, <span class="vr">err</span> = <span class="fn">sql.Open</span>(<span class="st">"mysql"</span>, <span class="vr">dsn</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="vr">log</span>.<span class="fn">Fatal</span>(<span class="vr">err</span>)
+    }
+    <span class="kw">defer</span> <span class="vr">db</span>.<span class="fn">Close</span>()
+
+    <span class="cm">// Ping으로 실제 연결 확인</span>
+    <span class="kw">if</span> <span class="vr">err</span> = <span class="vr">db</span>.<span class="fn">Ping</span>(); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="vr">log</span>.<span class="fn">Fatal</span>(<span class="st">"DB 연결 실패:"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"✓ MySQL 연결 성공"</span>)
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">DSN (Data Source Name) 파라미터</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파라미터</th><th>예시</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td><code>charset</code></td><td><code>utf8mb4</code></td><td>문자셋 설정. 이모지 지원 시 utf8mb4 사용</td></tr>
+              <tr><td><code>parseTime</code></td><td><code>True</code></td><td>TIME/DATE/DATETIME을 time.Time으로 자동 파싱</td></tr>
+              <tr><td><code>loc</code></td><td><code>Local</code></td><td>타임존 설정 (Local, UTC, Asia/Seoul)</td></tr>
+              <tr><td><code>timeout</code></td><td><code>5s</code></td><td>연결 타임아웃</td></tr>
+              <tr><td><code>readTimeout</code></td><td><code>30s</code></td><td>읽기 타임아웃</td></tr>
+              <tr><td><code>writeTimeout</code></td><td><code>30s</code></td><td>쓰기 타임아웃</td></tr>
+              <tr><td><code>multiStatements</code></td><td><code>true</code></td><td>다중 쿼리 허용 (보안 주의)</td></tr>
+              <tr><td><code>tls</code></td><td><code>true</code></td><td>TLS 암호화 연결 사용</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>sql.Open vs db.Ping</strong><br>
+        <code>sql.Open()</code>은 드라이버 유효성만 확인하고 실제 연결은 하지 않습니다.
+        실제 연결을 즉시 확인하려면 반드시 <code>db.Ping()</code> 또는 <code>db.PingContext(ctx)</code>를 호출하세요.</div>
+      </div>
+    </div>
+
+    <!-- 03. 커넥션 풀 -->
+    <div class="section" id="pool">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">커넥션 풀 <span class="accent">설정</span></h2>
+      </div>
+
+      <p>
+        <code>sql.DB</code>는 내부적으로 커넥션 풀을 관리합니다. 적절한 풀 설정은 성능과
+        MySQL 서버의 max_connections 한도를 고려해 튜닝해야 합니다.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+          <span class="code-filename">db.go</span>
+          <span class="code-lang">go</span>
+        </div>
+        <pre><span class="kw">func</span> <span class="fn">NewDB</span>(<span class="vr">dsn</span> <span class="tp">string</span>) (*<span class="tp">sql.DB</span>, <span class="tp">error</span>) {
+    <span class="vr">db</span>, <span class="vr">err</span> := <span class="fn">sql.Open</span>(<span class="st">"mysql"</span>, <span class="vr">dsn</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span>
+    }
+
+    <span class="cm">// 최대 열린 커넥션 수 (MySQL max_connections 미만으로 설정)</span>
+    <span class="vr">db</span>.<span class="fn">SetMaxOpenConns</span>(<span class="nm">25</span>)
+
+    <span class="cm">// 최대 유휴(idle) 커넥션 수</span>
+    <span class="vr">db</span>.<span class="fn">SetMaxIdleConns</span>(<span class="nm">10</span>)
+
+    <span class="cm">// 커넥션 최대 재사용 시간 (MySQL wait_timeout 이하로 설정)</span>
+    <span class="vr">db</span>.<span class="fn">SetConnMaxLifetime</span>(<span class="vr">time</span>.<span class="fn">Minute</span> * <span class="nm">3</span>)
+
+    <span class="cm">// 유휴 커넥션 최대 대기 시간 (Go 1.15+)</span>
+    <span class="vr">db</span>.<span class="fn">SetConnMaxIdleTime</span>(<span class="vr">time</span>.<span class="fn">Minute</span>)
+
+    <span class="kw">if</span> <span class="vr">err</span> = <span class="vr">db</span>.<span class="fn">Ping</span>(); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span>
+    }
+    <span class="kw">return</span> <span class="vr">db</span>, <span class="kw">nil</span>
+}
+
+<span class="cm">// 풀 상태 모니터링</span>
+<span class="kw">func</span> <span class="fn">printDBStats</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) {
+    <span class="vr">stats</span> := <span class="vr">db</span>.<span class="fn">Stats</span>()
+    <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"OpenConnections: %d\n"</span>, <span class="vr">stats</span>.<span class="fn">OpenConnections</span>)
+    <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"InUse: %d\n"</span>, <span class="vr">stats</span>.<span class="fn">InUse</span>)
+    <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"Idle: %d\n"</span>, <span class="vr">stats</span>.<span class="fn">Idle</span>)
+    <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"WaitCount: %d\n"</span>, <span class="vr">stats</span>.<span class="fn">WaitCount</span>)
+}</pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>메서드</th><th>기본값</th><th>권장 설정</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>SetMaxOpenConns</code></td><td>0 (무제한)</td><td>25</td><td>동시 열린 커넥션 최대 수. 0은 무제한</td></tr>
+            <tr><td><code>SetMaxIdleConns</code></td><td>2</td><td>10</td><td>풀에 유지할 유휴 커넥션 수</td></tr>
+            <tr><td><code>SetConnMaxLifetime</code></td><td>0 (무제한)</td><td>3m</td><td>커넥션 재사용 최대 시간</td></tr>
+            <tr><td><code>SetConnMaxIdleTime</code></td><td>0 (무제한)</td><td>1m</td><td>유휴 커넥션 유지 최대 시간 (Go 1.15+)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>MySQL wait_timeout 주의</strong><br>
+        MySQL의 <code>wait_timeout</code>(기본 8시간)이 지나면 서버가 커넥션을 끊습니다.
+        <code>SetConnMaxLifetime</code>을 wait_timeout보다 짧게 설정해 <strong>"invalid connection"</strong> 에러를 방지하세요.</div>
+      </div>
+    </div>
+
+    <!-- 04. SELECT 쿼리 -->
+    <div class="section" id="query">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">SELECT <span class="accent">쿼리</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">다중 행 조회 — db.Query()</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">query.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">type</span> <span class="tp">User</span> <span class="kw">struct</span> {
+    <span class="tp">ID</span>    <span class="tp">int</span>
+    <span class="tp">Name</span>  <span class="tp">string</span>
+    <span class="tp">Email</span> <span class="tp">string</span>
+    <span class="tp">Age</span>   <span class="tp">int</span>
+}
+
+<span class="kw">func</span> <span class="fn">getUsers</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) ([]<span class="tp">User</span>, <span class="tp">error</span>) {
+    <span class="cm">// ? 플레이스홀더로 SQL Injection 방지</span>
+    <span class="vr">rows</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Query</span>(
+        <span class="st">"SELECT id, name, email, age FROM users WHERE age > ? ORDER BY id"</span>,
+        <span class="nm">18</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"getUsers: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">defer</span> <span class="vr">rows</span>.<span class="fn">Close</span>() <span class="cm">// 반드시 닫아야 커넥션이 풀로 반환됨</span>
+
+    <span class="kw">var</span> <span class="vr">users</span> []<span class="tp">User</span>
+    <span class="kw">for</span> <span class="vr">rows</span>.<span class="fn">Next</span>() {
+        <span class="kw">var</span> <span class="vr">u</span> <span class="tp">User</span>
+        <span class="kw">if</span> <span class="vr">err</span> := <span class="vr">rows</span>.<span class="fn">Scan</span>(&<span class="vr">u</span>.<span class="tp">ID</span>, &<span class="vr">u</span>.<span class="tp">Name</span>, &<span class="vr">u</span>.<span class="tp">Email</span>, &<span class="vr">u</span>.<span class="tp">Age</span>); <span class="vr">err</span> != <span class="kw">nil</span> {
+            <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"getUsers scan: %w"</span>, <span class="vr">err</span>)
+        }
+        <span class="vr">users</span> = <span class="fn">append</span>(<span class="vr">users</span>, <span class="vr">u</span>)
+    }
+
+    <span class="cm">// 반복 중 발생한 에러 확인 (필수!)</span>
+    <span class="kw">if</span> <span class="vr">err</span> = <span class="vr">rows</span>.<span class="fn">Err</span>(); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"getUsers rows: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">return</span> <span class="vr">users</span>, <span class="kw">nil</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">단일 행 조회 — db.QueryRow()</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">query.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">func</span> <span class="fn">getUserByID</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">id</span> <span class="tp">int</span>) (*<span class="tp">User</span>, <span class="tp">error</span>) {
+    <span class="kw">var</span> <span class="vr">u</span> <span class="tp">User</span>
+
+    <span class="cm">// QueryRow는 항상 *sql.Row를 반환 (에러는 Scan에서 확인)</span>
+    <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">QueryRow</span>(
+        <span class="st">"SELECT id, name, email, age FROM users WHERE id = ?"</span>,
+        <span class="vr">id</span>,
+    ).<span class="fn">Scan</span>(&<span class="vr">u</span>.<span class="tp">ID</span>, &<span class="vr">u</span>.<span class="tp">Name</span>, &<span class="vr">u</span>.<span class="tp">Email</span>, &<span class="vr">u</span>.<span class="tp">Age</span>)
+
+    <span class="kw">switch</span> {
+    <span class="kw">case</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">sql</span>.<span class="fn">ErrNoRows</span>):
+        <span class="cm">// 결과 없음 — nil 반환 또는 커스텀 에러</span>
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"user id=%d not found"</span>, <span class="vr">id</span>)
+    <span class="kw">case</span> <span class="vr">err</span> != <span class="kw">nil</span>:
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"getUserByID: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">return</span> &<span class="vr">u</span>, <span class="kw">nil</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="callout danger">
+        <span class="callout-icon">🚫</span>
+        <div><strong>rows.Close() 누락은 커넥션 누수!</strong><br>
+        <code>rows.Close()</code>를 호출하지 않으면 해당 커넥션이 풀로 반환되지 않아 커넥션이 고갈됩니다.
+        항상 <code>defer rows.Close()</code>를 Query 바로 다음 줄에 작성하세요.</div>
+      </div>
+    </div>
+
+    <!-- 05. INSERT / UPDATE / DELETE -->
+    <div class="section" id="exec">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">INSERT / UPDATE / <span class="accent">DELETE</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">db.Exec() — 단일 실행</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">exec.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// INSERT — LastInsertId 활용</span>
+<span class="kw">func</span> <span class="fn">createUser</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">name</span>, <span class="vr">email</span> <span class="tp">string</span>, <span class="vr">age</span> <span class="tp">int</span>) (<span class="tp">int64</span>, <span class="tp">error</span>) {
+    <span class="vr">result</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Exec</span>(
+        <span class="st">"INSERT INTO users (name, email, age) VALUES (?, ?, ?)"</span>,
+        <span class="vr">name</span>, <span class="vr">email</span>, <span class="vr">age</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"createUser: %w"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="vr">id</span>, <span class="vr">err</span> := <span class="vr">result</span>.<span class="fn">LastInsertId</span>() <span class="cm">// AUTO_INCREMENT ID</span>
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">err</span>
+    }
+    <span class="kw">return</span> <span class="vr">id</span>, <span class="kw">nil</span>
+}
+
+<span class="cm">// UPDATE — RowsAffected 활용</span>
+<span class="kw">func</span> <span class="fn">updateUserEmail</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">id</span> <span class="tp">int</span>, <span class="vr">newEmail</span> <span class="tp">string</span>) (<span class="tp">int64</span>, <span class="tp">error</span>) {
+    <span class="vr">result</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Exec</span>(
+        <span class="st">"UPDATE users SET email = ? WHERE id = ?"</span>,
+        <span class="vr">newEmail</span>, <span class="vr">id</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"updateUserEmail: %w"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="vr">affected</span>, <span class="vr">err</span> := <span class="vr">result</span>.<span class="fn">RowsAffected</span>() <span class="cm">// 변경된 행 수</span>
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">err</span>
+    }
+    <span class="kw">return</span> <span class="vr">affected</span>, <span class="kw">nil</span>
+}
+
+<span class="cm">// DELETE</span>
+<span class="kw">func</span> <span class="fn">deleteUser</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">id</span> <span class="tp">int</span>) <span class="tp">error</span> {
+    <span class="vr">result</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Exec</span>(<span class="st">"DELETE FROM users WHERE id = ?"</span>, <span class="vr">id</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"deleteUser: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">if</span> <span class="vr">n</span>, _ := <span class="vr">result</span>.<span class="fn">RowsAffected</span>(); <span class="vr">n</span> == <span class="nm">0</span> {
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"user id=%d not found"</span>, <span class="vr">id</span>)
+    }
+    <span class="kw">return</span> <span class="kw">nil</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">Bulk INSERT (다중 행 삽입)</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">bulk.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">import</span> (
+    <span class="st">"fmt"</span>
+    <span class="st">"strings"</span>
+)
+
+<span class="kw">func</span> <span class="fn">bulkInsertUsers</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">users</span> []<span class="tp">User</span>) <span class="tp">error</span> {
+    <span class="kw">if</span> <span class="fn">len</span>(<span class="vr">users</span>) == <span class="nm">0</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>
+    }
+
+    <span class="cm">// VALUES 플레이스홀더 동적 생성</span>
+    <span class="vr">valueStrings</span> := <span class="fn">make</span>([]<span class="tp">string</span>, <span class="nm">0</span>, <span class="fn">len</span>(<span class="vr">users</span>))
+    <span class="vr">valueArgs</span>   := <span class="fn">make</span>([]<span class="kw">interface</span>{}, <span class="nm">0</span>, <span class="fn">len</span>(<span class="vr">users</span>)*<span class="nm">3</span>)
+
+    <span class="kw">for</span> _, <span class="vr">u</span> := <span class="kw">range</span> <span class="vr">users</span> {
+        <span class="vr">valueStrings</span> = <span class="fn">append</span>(<span class="vr">valueStrings</span>, <span class="st">"(?, ?, ?)"</span>)
+        <span class="vr">valueArgs</span>   = <span class="fn">append</span>(<span class="vr">valueArgs</span>, <span class="vr">u</span>.<span class="tp">Name</span>, <span class="vr">u</span>.<span class="tp">Email</span>, <span class="vr">u</span>.<span class="tp">Age</span>)
+    }
+
+    <span class="vr">query</span> := <span class="vr">fmt</span>.<span class="fn">Sprintf</span>(
+        <span class="st">"INSERT INTO users (name, email, age) VALUES %s"</span>,
+        <span class="vr">strings</span>.<span class="fn">Join</span>(<span class="vr">valueStrings</span>, <span class="st">","</span>),
+    )
+
+    <span class="vr">_</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Exec</span>(<span class="vr">query</span>, <span class="vr">valueArgs</span>...)
+    <span class="kw">return</span> <span class="vr">err</span>
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06. Prepared Statement -->
+    <div class="section" id="prepared">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">Prepared <span class="accent">Statement</span></h2>
+      </div>
+
+      <p>
+        Prepared Statement는 동일한 쿼리를 반복 실행할 때 성능을 높입니다.
+        MySQL 서버가 쿼리를 한 번 파싱·컴파일하고, 이후 실행 시 바인딩된 파라미터만 전달합니다.
+        SQL Injection도 원천 차단됩니다.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+          <span class="code-filename">stmt.go</span>
+          <span class="code-lang">go</span>
+        </div>
+        <pre><span class="kw">type</span> <span class="tp">UserUpdate</span> <span class="kw">struct</span> {
+    <span class="tp">ID</span>   <span class="tp">int</span>
+    <span class="tp">Name</span> <span class="tp">string</span>
+    <span class="tp">Age</span>  <span class="tp">int</span>
+}
+
+<span class="kw">func</span> <span class="fn">batchUpdate</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">updates</span> []<span class="tp">UserUpdate</span>) <span class="tp">error</span> {
+    <span class="cm">// Prepare: 쿼리를 미리 컴파일</span>
+    <span class="vr">stmt</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Prepare</span>(<span class="st">"UPDATE users SET name = ?, age = ? WHERE id = ?"</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"prepare: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">defer</span> <span class="vr">stmt</span>.<span class="fn">Close</span>() <span class="cm">// 반드시 닫기</span>
+
+    <span class="kw">for</span> _, <span class="vr">upd</span> := <span class="kw">range</span> <span class="vr">updates</span> {
+        <span class="cm">// 컴파일된 쿼리에 파라미터만 바인딩해 실행</span>
+        <span class="kw">if</span> _, <span class="vr">err</span> := <span class="vr">stmt</span>.<span class="fn">Exec</span>(<span class="vr">upd</span>.<span class="tp">Name</span>, <span class="vr">upd</span>.<span class="tp">Age</span>, <span class="vr">upd</span>.<span class="tp">ID</span>); <span class="vr">err</span> != <span class="kw">nil</span> {
+            <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"exec id=%d: %w"</span>, <span class="vr">upd</span>.<span class="tp">ID</span>, <span class="vr">err</span>)
+        }
+    }
+    <span class="kw">return</span> <span class="kw">nil</span>
+}
+
+<span class="cm">// Stmt를 이용한 SELECT</span>
+<span class="kw">func</span> <span class="fn">preparedSelect</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) <span class="tp">error</span> {
+    <span class="vr">stmt</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Prepare</span>(<span class="st">"SELECT id, name FROM users WHERE status = ? LIMIT ?"</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">stmt</span>.<span class="fn">Close</span>()
+
+    <span class="vr">rows</span>, <span class="vr">err</span> := <span class="vr">stmt</span>.<span class="fn">Query</span>(<span class="st">"active"</span>, <span class="nm">100</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">rows</span>.<span class="fn">Close</span>()
+
+    <span class="kw">for</span> <span class="vr">rows</span>.<span class="fn">Next</span>() {
+        <span class="kw">var</span> <span class="vr">id</span> <span class="tp">int</span>
+        <span class="kw">var</span> <span class="vr">name</span> <span class="tp">string</span>
+        <span class="vr">rows</span>.<span class="fn">Scan</span>(&<span class="vr">id</span>, &<span class="vr">name</span>)
+        <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"%d: %s\n"</span>, <span class="vr">id</span>, <span class="vr">name</span>)
+    }
+    <span class="kw">return</span> <span class="vr">rows</span>.<span class="fn">Err</span>()
+}</pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div><strong>Stmt와 트랜잭션</strong><br>
+        트랜잭션 내에서 Prepared Statement를 사용하려면 <code>tx.Stmt(stmt)</code>로
+        기존 stmt를 트랜잭션 범위로 변환하거나, <code>tx.Prepare()</code>로 새로 생성해야 합니다.</div>
+      </div>
+    </div>
+
+    <!-- 07. Named Parameter -->
+    <div class="section" id="named">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">Named <span class="accent">Parameter</span></h2>
+      </div>
+
+      <p>
+        Go 표준 <code>database/sql</code>은 기본적으로 위치 기반(<code>?</code>) 파라미터를 사용합니다.
+        Named Parameter가 필요한 경우 <code>sql.Named()</code> 또는 드라이버별 확장을 사용할 수 있습니다.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+          <span class="code-filename">named.go</span>
+          <span class="code-lang">go</span>
+        </div>
+        <pre><span class="cm">// sql.Named()를 이용한 명명된 파라미터</span>
+<span class="kw">func</span> <span class="fn">namedParamExample</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">db</span> *<span class="tp">sql.DB</span>) <span class="tp">error</span> {
+    <span class="vr">_</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">ExecContext</span>(<span class="vr">ctx</span>,
+        <span class="st">`INSERT INTO orders (user_id, amount, status)
+         VALUES (:userID, :amount, :status)`</span>,
+        <span class="vr">sql</span>.<span class="fn">Named</span>(<span class="st">"userID"</span>, <span class="nm">42</span>),
+        <span class="vr">sql</span>.<span class="fn">Named</span>(<span class="st">"amount"</span>, <span class="nm">9900</span>),
+        <span class="vr">sql</span>.<span class="fn">Named</span>(<span class="st">"status"</span>, <span class="st">"pending"</span>),
+    )
+    <span class="kw">return</span> <span class="vr">err</span>
+}
+
+<span class="cm">// 구조체 필드 매핑 패턴 (수동)</span>
+<span class="kw">type</span> <span class="tp">OrderParams</span> <span class="kw">struct</span> {
+    <span class="tp">UserID</span> <span class="tp">int</span>
+    <span class="tp">Amount</span> <span class="tp">float64</span>
+    <span class="tp">Status</span> <span class="tp">string</span>
+}
+
+<span class="kw">func</span> <span class="fn">insertOrder</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">p</span> <span class="tp">OrderParams</span>) <span class="tp">error</span> {
+    <span class="vr">_</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Exec</span>(
+        <span class="st">"INSERT INTO orders (user_id, amount, status) VALUES (?, ?, ?)"</span>,
+        <span class="vr">p</span>.<span class="tp">UserID</span>, <span class="vr">p</span>.<span class="tp">Amount</span>, <span class="vr">p</span>.<span class="tp">Status</span>,
+    )
+    <span class="kw">return</span> <span class="vr">err</span>
+}</pre>
+      </div>
+    </div>
+
+    <!-- 08. 트랜잭션 -->
+    <div class="section" id="tx">
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2 class="section-title"><span class="accent">트랜잭션</span> (Transaction)</h2>
+      </div>
+
+      <p>
+        트랜잭션은 여러 쿼리를 하나의 원자적 단위로 묶어 ACID 속성을 보장합니다.
+        Go의 <code>sql.Tx</code>는 트랜잭션 전용 커넥션을 단독으로 사용합니다.
+      </p>
+
+      <div class="sub-section">
+        <div class="sub-title">기본 트랜잭션 패턴</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">transaction.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// 계좌 이체 예제 — 원자성 보장</span>
+<span class="kw">func</span> <span class="fn">transfer</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">fromID</span>, <span class="vr">toID</span>, <span class="vr">amount</span> <span class="tp">int</span>) <span class="tp">error</span> {
+    <span class="cm">// 트랜잭션 시작</span>
+    <span class="vr">tx</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Begin</span>()
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"begin tx: %w"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="cm">// defer로 롤백 보장 — Commit 이후엔 no-op이 됨</span>
+    <span class="kw">defer</span> <span class="kw">func</span>() {
+        <span class="kw">if</span> <span class="vr">p</span> := <span class="fn">recover</span>(); <span class="vr">p</span> != <span class="kw">nil</span> {
+            <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+            <span class="fn">panic</span>(<span class="vr">p</span>)
+        }
+    }()
+
+    <span class="cm">// 출금 계좌에서 차감</span>
+    <span class="vr">res</span>, <span class="vr">err</span> := <span class="vr">tx</span>.<span class="fn">Exec</span>(
+        <span class="st">"UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?"</span>,
+        <span class="vr">amount</span>, <span class="vr">fromID</span>, <span class="vr">amount</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"debit: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">if</span> <span class="vr">n</span>, _ := <span class="vr">res</span>.<span class="fn">RowsAffected</span>(); <span class="vr">n</span> == <span class="nm">0</span> {
+        <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"잔액 부족 또는 계좌 없음"</span>)
+    }
+
+    <span class="cm">// 입금 계좌에 추가</span>
+    <span class="kw">if</span> _, <span class="vr">err</span> = <span class="vr">tx</span>.<span class="fn">Exec</span>(
+        <span class="st">"UPDATE accounts SET balance = balance + ? WHERE id = ?"</span>,
+        <span class="vr">amount</span>, <span class="vr">toID</span>,
+    ); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"credit: %w"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="cm">// 트랜잭션 로그 기록</span>
+    <span class="kw">if</span> _, <span class="vr">err</span> = <span class="vr">tx</span>.<span class="fn">Exec</span>(
+        <span class="st">"INSERT INTO tx_log (from_id, to_id, amount) VALUES (?, ?, ?)"</span>,
+        <span class="vr">fromID</span>, <span class="vr">toID</span>, <span class="vr">amount</span>,
+    ); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+        <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"log: %w"</span>, <span class="vr">err</span>)
+    }
+
+    <span class="cm">// 모든 작업 성공 시 커밋</span>
+    <span class="kw">return</span> <span class="vr">tx</span>.<span class="fn">Commit</span>()
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">헬퍼 함수로 트랜잭션 추상화</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">tx_helper.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// 재사용 가능한 트랜잭션 래퍼</span>
+<span class="cm">// named return(err)을 사용해 Commit 실패 시에도 defer Rollback이 정상 동작</span>
+<span class="kw">func</span> <span class="fn">WithTx</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">fn</span> <span class="kw">func</span>(*<span class="tp">sql.Tx</span>) <span class="tp">error</span>) (<span class="vr">err</span> <span class="tp">error</span>) {
+    <span class="vr">tx</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">BeginTx</span>(<span class="vr">ctx</span>, <span class="kw">nil</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span>
+    }
+
+    <span class="kw">defer</span> <span class="kw">func</span>() {
+        <span class="kw">if</span> <span class="vr">p</span> := <span class="fn">recover</span>(); <span class="vr">p</span> != <span class="kw">nil</span> {
+            _ = <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+            <span class="fn">panic</span>(<span class="vr">p</span>)
+        } <span class="kw">else if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+            <span class="cm">// fn() 또는 Commit() 실패 시 named return err != nil → 자동 롤백</span>
+            _ = <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+        }
+    }()
+
+    <span class="kw">if</span> <span class="vr">err</span> = <span class="fn">fn</span>(<span class="vr">tx</span>); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span>
+    }
+    <span class="cm">// Commit 결과도 named return err에 할당됨</span>
+    <span class="vr">err</span> = <span class="vr">tx</span>.<span class="fn">Commit</span>()
+    <span class="kw">return</span>
+}
+
+<span class="cm">// 사용 예시</span>
+<span class="kw">type</span> <span class="tp">OrderItem</span> <span class="kw">struct</span> {
+    <span class="tp">ProductID</span> <span class="tp">int</span>
+    <span class="tp">Qty</span>       <span class="tp">int</span>
+}
+
+<span class="kw">type</span> <span class="tp">Order</span> <span class="kw">struct</span> {
+    <span class="tp">UserID</span> <span class="tp">int</span>
+    <span class="tp">Total</span>  <span class="tp">float64</span>
+    <span class="tp">Items</span>  []<span class="tp">OrderItem</span>
+}
+
+<span class="kw">func</span> <span class="fn">createOrderWithItems</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">order</span> <span class="tp">Order</span>) <span class="tp">error</span> {
+    <span class="kw">return</span> <span class="fn">WithTx</span>(<span class="vr">context</span>.<span class="fn">Background</span>(), <span class="vr">db</span>, <span class="kw">func</span>(<span class="vr">tx</span> *<span class="tp">sql.Tx</span>) <span class="tp">error</span> {
+        <span class="vr">res</span>, <span class="vr">err</span> := <span class="vr">tx</span>.<span class="fn">Exec</span>(
+            <span class="st">"INSERT INTO orders (user_id, total) VALUES (?, ?)"</span>,
+            <span class="vr">order</span>.<span class="tp">UserID</span>, <span class="vr">order</span>.<span class="tp">Total</span>,
+        )
+        <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+
+        <span class="vr">orderID</span>, _ := <span class="vr">res</span>.<span class="fn">LastInsertId</span>()
+        <span class="kw">for</span> _, <span class="vr">item</span> := <span class="kw">range</span> <span class="vr">order</span>.<span class="tp">Items</span> {
+            <span class="kw">if</span> _, <span class="vr">err</span> := <span class="vr">tx</span>.<span class="fn">Exec</span>(
+                <span class="st">"INSERT INTO order_items (order_id, product_id, qty) VALUES (?, ?, ?)"</span>,
+                <span class="vr">orderID</span>, <span class="vr">item</span>.<span class="tp">ProductID</span>, <span class="vr">item</span>.<span class="tp">Qty</span>,
+            ); <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+        }
+        <span class="kw">return</span> <span class="kw">nil</span>
+    })
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">트랜잭션 격리 수준 설정</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">isolation.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// 트랜잭션 옵션으로 격리 수준 설정</span>
+<span class="kw">func</span> <span class="fn">txWithIsolation</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">db</span> *<span class="tp">sql.DB</span>) <span class="tp">error</span> {
+    <span class="vr">tx</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">BeginTx</span>(<span class="vr">ctx</span>, &<span class="tp">sql.TxOptions</span>{
+        Isolation: <span class="vr">sql</span>.<span class="fn">LevelSerializable</span>, <span class="cm">// 가장 엄격</span>
+        ReadOnly:  <span class="kw">false</span>,
+    })
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+    <span class="cm">// ... 쿼리 실행 ...</span>
+    <span class="kw">return</span> <span class="vr">tx</span>.<span class="fn">Commit</span>()
+}
+
+<span class="cm">// 사용 가능한 격리 수준:</span>
+<span class="cm">// sql.LevelDefault           — 드라이버 기본값</span>
+<span class="cm">// sql.LevelReadUncommitted   — Dirty Read 허용</span>
+<span class="cm">// sql.LevelReadCommitted     — Committed 데이터만 읽기</span>
+<span class="cm">// sql.LevelRepeatableRead    — MySQL 기본값, Phantom Read 방지</span>
+<span class="cm">// sql.LevelSerializable      — 완전한 직렬화</span>
+
+<span class="cm">// 읽기 전용 트랜잭션 (성능 최적화)</span>
+<span class="kw">func</span> <span class="fn">txReadOnly</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">db</span> *<span class="tp">sql.DB</span>) <span class="tp">error</span> {
+    <span class="vr">tx</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">BeginTx</span>(<span class="vr">ctx</span>, &<span class="tp">sql.TxOptions</span>{
+        Isolation: <span class="vr">sql</span>.<span class="fn">LevelRepeatableRead</span>,
+        ReadOnly:  <span class="kw">true</span>, <span class="cm">// MySQL이 읽기 최적화 수행</span>
+    })
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+    <span class="cm">// ... 읽기 쿼리 실행 ...</span>
+    <span class="kw">return</span> <span class="vr">tx</span>.<span class="fn">Commit</span>()
+}</pre>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>격리 수준</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th><th>MySQL 기본</th></tr></thead>
+          <tbody>
+            <tr><td>READ UNCOMMITTED</td><td>가능</td><td>가능</td><td>가능</td><td></td></tr>
+            <tr><td>READ COMMITTED</td><td>방지</td><td>가능</td><td>가능</td><td></td></tr>
+            <tr><td>REPEATABLE READ</td><td>방지</td><td>방지</td><td>방지*</td><td>✓</td></tr>
+            <tr><td>SERIALIZABLE</td><td>방지</td><td>방지</td><td>방지</td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 09. NULL 처리 -->
+    <div class="section" id="nulls">
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2 class="section-title">NULL <span class="accent">처리</span></h2>
+      </div>
+
+      <p>
+        MySQL의 NULL 값은 Go의 기본 타입(<code>string</code>, <code>int</code> 등)으로 직접 Scan할 수 없습니다.
+        <code>sql.Null*</code> 타입이나 포인터를 사용해야 합니다.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+          <span class="code-filename">null.go</span>
+          <span class="code-lang">go</span>
+        </div>
+        <pre><span class="kw">type</span> <span class="tp">Profile</span> <span class="kw">struct</span> {
+    ID       <span class="tp">int</span>
+    Name     <span class="tp">string</span>
+    Bio      <span class="vr">sql</span>.<span class="tp">NullString</span>   <span class="cm">// nullable VARCHAR</span>
+    Age      <span class="vr">sql</span>.<span class="tp">NullInt64</span>    <span class="cm">// nullable INT</span>
+    Score    <span class="vr">sql</span>.<span class="tp">NullFloat64</span>  <span class="cm">// nullable FLOAT</span>
+    Verified <span class="vr">sql</span>.<span class="tp">NullBool</span>    <span class="cm">// nullable BOOLEAN</span>
+    Birthday <span class="vr">sql</span>.<span class="tp">NullTime</span>    <span class="cm">// nullable DATETIME (Go 1.15+)</span>
+}
+
+<span class="kw">func</span> <span class="fn">getProfile</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">id</span> <span class="tp">int</span>) (*<span class="tp">Profile</span>, <span class="tp">error</span>) {
+    <span class="kw">var</span> <span class="vr">p</span> <span class="tp">Profile</span>
+    <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">QueryRow</span>(
+        <span class="st">`SELECT id, name, bio, age, score, verified, birthday
+           FROM profiles WHERE id = ?`</span>, <span class="vr">id</span>,
+    ).<span class="fn">Scan</span>(&<span class="vr">p</span>.<span class="tp">ID</span>, &<span class="vr">p</span>.<span class="tp">Name</span>, &<span class="vr">p</span>.<span class="tp">Bio</span>, &<span class="vr">p</span>.<span class="tp">Age</span>,
+           &<span class="vr">p</span>.<span class="tp">Score</span>, &<span class="vr">p</span>.<span class="tp">Verified</span>, &<span class="vr">p</span>.<span class="tp">Birthday</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span> }
+    <span class="kw">return</span> &<span class="vr">p</span>, <span class="kw">nil</span>
+}
+
+<span class="cm">// NullString 사용법</span>
+<span class="kw">func</span> <span class="fn">printProfile</span>(<span class="vr">p</span> *<span class="tp">Profile</span>) {
+    <span class="kw">if</span> <span class="vr">p</span>.<span class="tp">Bio</span>.<span class="fn">Valid</span> {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"Bio:"</span>, <span class="vr">p</span>.<span class="tp">Bio</span>.<span class="fn">String</span>) <span class="cm">// 실제 값</span>
+    } <span class="kw">else</span> {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"Bio: NULL"</span>)
+    }
+}
+
+<span class="cm">// 포인터를 이용한 NULL 처리 (대안)</span>
+<span class="kw">type</span> <span class="tp">ProductRow</span> <span class="kw">struct</span> {
+    ID          <span class="tp">int</span>
+    Name        <span class="tp">string</span>
+    Description *<span class="tp">string</span>   <span class="cm">// nil = NULL</span>
+    Weight      *<span class="tp">float64</span>  <span class="cm">// nil = NULL</span>
+}
+
+<span class="cm">// INSERT 시 NullString 생성</span>
+<span class="kw">func</span> <span class="fn">toNullString</span>(<span class="vr">s</span> <span class="tp">string</span>) <span class="vr">sql</span>.<span class="tp">NullString</span> {
+    <span class="kw">return</span> <span class="vr">sql</span>.<span class="tp">NullString</span>{<span class="fn">String</span>: <span class="vr">s</span>, <span class="fn">Valid</span>: <span class="vr">s</span> != <span class="st">""</span>}
+}</pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>타입</th><th>필드</th><th>대응 MySQL 타입</th></tr></thead>
+          <tbody>
+            <tr><td><code>sql.NullString</code></td><td>String, Valid</td><td>VARCHAR, TEXT, CHAR</td></tr>
+            <tr><td><code>sql.NullInt16</code></td><td>Int16, Valid</td><td>TINYINT, SMALLINT</td></tr>
+            <tr><td><code>sql.NullInt32</code></td><td>Int32, Valid</td><td>MEDIUMINT, INT</td></tr>
+            <tr><td><code>sql.NullInt64</code></td><td>Int64, Valid</td><td>INT, BIGINT</td></tr>
+            <tr><td><code>sql.NullFloat64</code></td><td>Float64, Valid</td><td>FLOAT, DOUBLE, DECIMAL</td></tr>
+            <tr><td><code>sql.NullBool</code></td><td>Bool, Valid</td><td>BOOLEAN, TINYINT(1)</td></tr>
+            <tr><td><code>sql.NullTime</code></td><td>Time, Valid</td><td>DATE, DATETIME, TIMESTAMP</td></tr>
+            <tr><td><code>sql.NullByte</code></td><td>Byte, Valid</td><td>TINYINT UNSIGNED</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 10. Row 스캔 패턴 -->
+    <div class="section" id="rows">
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2 class="section-title">Row 스캔 <span class="accent">패턴</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">Columns()로 동적 스캔</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">scan.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// 컬럼명을 모를 때 동적으로 결과를 map으로 변환</span>
+<span class="kw">func</span> <span class="fn">queryToMap</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>, <span class="vr">query</span> <span class="tp">string</span>, <span class="vr">args</span> ...<span class="kw">interface</span>{}) ([]<span class="fn">map</span>[<span class="tp">string</span>]<span class="kw">interface</span>{}, <span class="tp">error</span>) {
+    <span class="vr">rows</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Query</span>(<span class="vr">query</span>, <span class="vr">args</span>...)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">rows</span>.<span class="fn">Close</span>()
+
+    <span class="vr">cols</span>, <span class="vr">err</span> := <span class="vr">rows</span>.<span class="fn">Columns</span>() <span class="cm">// 컬럼명 가져오기</span>
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span> }
+
+    <span class="kw">var</span> <span class="vr">result</span> []<span class="fn">map</span>[<span class="tp">string</span>]<span class="kw">interface</span>{}
+
+    <span class="kw">for</span> <span class="vr">rows</span>.<span class="fn">Next</span>() {
+        <span class="cm">// 각 컬럼에 대한 interface{} 슬라이스 생성</span>
+        <span class="vr">vals</span> := <span class="fn">make</span>([]<span class="kw">interface</span>{}, <span class="fn">len</span>(<span class="vr">cols</span>))
+        <span class="vr">ptrs</span> := <span class="fn">make</span>([]<span class="kw">interface</span>{}, <span class="fn">len</span>(<span class="vr">cols</span>))
+        <span class="kw">for</span> <span class="vr">i</span> := <span class="kw">range</span> <span class="vr">vals</span> { <span class="vr">ptrs</span>[<span class="vr">i</span>] = &<span class="vr">vals</span>[<span class="vr">i</span>] }
+
+        <span class="kw">if</span> <span class="vr">err</span> := <span class="vr">rows</span>.<span class="fn">Scan</span>(<span class="vr">ptrs</span>...); <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span> }
+
+        <span class="vr">row</span> := <span class="fn">make</span>(<span class="fn">map</span>[<span class="tp">string</span>]<span class="kw">interface</span>{})
+        <span class="kw">for</span> <span class="vr">i</span>, <span class="vr">col</span> := <span class="kw">range</span> <span class="vr">cols</span> {
+            <span class="vr">row</span>[<span class="vr">col</span>] = <span class="vr">vals</span>[<span class="vr">i</span>]
+        }
+        <span class="vr">result</span> = <span class="fn">append</span>(<span class="vr">result</span>, <span class="vr">row</span>)
+    }
+    <span class="kw">return</span> <span class="vr">result</span>, <span class="vr">rows</span>.<span class="fn">Err</span>()
+}
+
+<span class="cm">// ColumnTypes()로 타입 정보 조회</span>
+<span class="kw">func</span> <span class="fn">printColumnInfo</span>(<span class="vr">rows</span> *<span class="tp">sql.Rows</span>) {
+    <span class="vr">types</span>, _ := <span class="vr">rows</span>.<span class="fn">ColumnTypes</span>()
+    <span class="kw">for</span> _, <span class="vr">ct</span> := <span class="kw">range</span> <span class="vr">types</span> {
+        <span class="vr">nullable</span>, <span class="vr">_</span> := <span class="vr">ct</span>.<span class="fn">Nullable</span>()
+        <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"col=%s dbType=%s nullable=%v\n"</span>,
+            <span class="vr">ct</span>.<span class="fn">Name</span>(), <span class="vr">ct</span>.<span class="fn">DatabaseTypeName</span>(), <span class="vr">nullable</span>)
+    }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Context -->
+    <div class="section" id="ctx">
+      <div class="section-header">
+        <span class="section-num">11</span>
+        <h2 class="section-title">Context &amp; <span class="accent">타임아웃</span></h2>
+      </div>
+
+      <p>
+        Go 1.8부터 <code>database/sql</code>의 모든 주요 메서드에 <code>Context</code>를 받는
+        <code>*Context</code> 버전이 추가되었습니다. 타임아웃, 취소, HTTP 요청 생명주기와
+        쿼리를 연동할 때 필수입니다.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+          <span class="code-filename">context.go</span>
+          <span class="code-lang">go</span>
+        </div>
+        <pre><span class="cm">// 쿼리 타임아웃 설정</span>
+<span class="kw">func</span> <span class="fn">queryWithTimeout</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) (<span class="tp">string</span>, <span class="tp">error</span>) {
+    <span class="vr">ctx</span>, <span class="vr">cancel</span> := <span class="vr">context</span>.<span class="fn">WithTimeout</span>(<span class="vr">context</span>.<span class="fn">Background</span>(), <span class="nm">3</span>*<span class="vr">time</span>.<span class="fn">Second</span>)
+    <span class="kw">defer</span> <span class="fn">cancel</span>() <span class="cm">// 반드시 cancel 호출</span>
+
+    <span class="kw">var</span> <span class="vr">name</span> <span class="tp">string</span>
+    <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">QueryRowContext</span>(<span class="vr">ctx</span>,
+        <span class="st">"SELECT name FROM users WHERE id = ?"</span>, <span class="nm">1</span>,
+    ).<span class="fn">Scan</span>(&<span class="vr">name</span>)
+    <span class="kw">return</span> <span class="vr">name</span>, <span class="vr">err</span>
+}
+
+<span class="cm">// HTTP 핸들러에서 요청 컨텍스트 전파</span>
+<span class="kw">func</span> <span class="fn">UserHandler</span>(<span class="vr">w</span> <span class="tp">http.ResponseWriter</span>, <span class="vr">r</span> *<span class="tp">http.Request</span>) {
+    <span class="cm">// r.Context()는 클라이언트 연결 끊기면 자동 취소</span>
+    <span class="vr">ctx</span> := <span class="vr">r</span>.<span class="fn">Context</span>()
+
+    <span class="vr">rows</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">QueryContext</span>(<span class="vr">ctx</span>,
+        <span class="st">"SELECT id, name FROM users ORDER BY created_at DESC LIMIT 20"</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">context</span>.<span class="fn">Canceled</span>) {
+            <span class="vr">http</span>.<span class="fn">Error</span>(<span class="vr">w</span>, <span class="st">"request canceled"</span>, <span class="vr">http</span>.<span class="fn">StatusRequestTimeout</span>)
+            <span class="kw">return</span>
+        }
+        <span class="vr">http</span>.<span class="fn">Error</span>(<span class="vr">w</span>, <span class="vr">err</span>.<span class="fn">Error</span>(), <span class="vr">http</span>.<span class="fn">StatusInternalServerError</span>)
+        <span class="kw">return</span>
+    }
+    <span class="kw">defer</span> <span class="vr">rows</span>.<span class="fn">Close</span>()
+    <span class="cm">// ... rows 처리</span>
+}
+
+<span class="cm">// 트랜잭션 + Context</span>
+<span class="kw">func</span> <span class="fn">txWithDeadline</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) <span class="tp">error</span> {
+    <span class="vr">ctx</span>, <span class="vr">cancel</span> := <span class="vr">context</span>.<span class="fn">WithDeadline</span>(
+        <span class="vr">context</span>.<span class="fn">Background</span>(),
+        <span class="vr">time</span>.<span class="fn">Now</span>().<span class="fn">Add</span>(<span class="nm">10</span>*<span class="vr">time</span>.<span class="fn">Second</span>),
+    )
+    <span class="kw">defer</span> <span class="fn">cancel</span>()
+
+    <span class="vr">tx</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">BeginTx</span>(<span class="vr">ctx</span>, <span class="kw">nil</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="vr">err</span> }
+    <span class="kw">defer</span> <span class="vr">tx</span>.<span class="fn">Rollback</span>()
+
+    <span class="kw">if</span> _, <span class="vr">err</span> = <span class="vr">tx</span>.<span class="fn">ExecContext</span>(<span class="vr">ctx</span>, <span class="st">"UPDATE ..."</span>); <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="vr">err</span>
+    }
+    <span class="kw">return</span> <span class="vr">tx</span>.<span class="fn">Commit</span>()
+}</pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>메서드</th><th>Context 버전</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td><code>db.Query()</code></td><td><code>db.QueryContext(ctx, ...)</code></td><td>다중 행 SELECT</td></tr>
+            <tr><td><code>db.QueryRow()</code></td><td><code>db.QueryRowContext(ctx, ...)</code></td><td>단일 행 SELECT</td></tr>
+            <tr><td><code>db.Exec()</code></td><td><code>db.ExecContext(ctx, ...)</code></td><td>INSERT/UPDATE/DELETE</td></tr>
+            <tr><td><code>db.Prepare()</code></td><td><code>db.PrepareContext(ctx, ...)</code></td><td>Stmt 생성</td></tr>
+            <tr><td><code>db.Begin()</code></td><td><code>db.BeginTx(ctx, opts)</code></td><td>트랜잭션 시작</td></tr>
+            <tr><td><code>db.Ping()</code></td><td><code>db.PingContext(ctx)</code></td><td>연결 확인</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 12. 에러 처리 -->
+    <div class="section" id="error">
+      <div class="section-header">
+        <span class="section-num">12</span>
+        <h2 class="section-title">에러 <span class="accent">처리</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">표준 에러 타입</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">error.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">import</span> (
+    <span class="st">"errors"</span>
+    <span class="st">"database/sql"</span>
+    <span class="st">"github.com/go-sql-driver/mysql"</span>
+)
+
+<span class="kw">func</span> <span class="fn">handleDBError</span>(<span class="vr">err</span> <span class="tp">error</span>) {
+    <span class="kw">if</span> <span class="vr">err</span> == <span class="kw">nil</span> { <span class="kw">return</span> }
+
+    <span class="cm">// 1. 결과 없음</span>
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">sql</span>.<span class="fn">ErrNoRows</span>) {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"데이터 없음"</span>)
+        <span class="kw">return</span>
+    }
+
+    <span class="cm">// 2. 커넥션 풀 닫힘</span>
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">sql</span>.<span class="fn">ErrConnDone</span>) {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"DB 커넥션 종료됨"</span>)
+        <span class="kw">return</span>
+    }
+
+    <span class="cm">// 3. 트랜잭션 종료됨</span>
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">sql</span>.<span class="fn">ErrTxDone</span>) {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"트랜잭션 이미 종료"</span>)
+        <span class="kw">return</span>
+    }
+
+    <span class="cm">// 4. MySQL 드라이버 에러 분석</span>
+    <span class="kw">var</span> <span class="vr">mysqlErr</span> *<span class="vr">mysql</span>.<span class="tp">MySQLError</span>
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">As</span>(<span class="vr">err</span>, &<span class="vr">mysqlErr</span>) {
+        <span class="kw">switch</span> <span class="vr">mysqlErr</span>.<span class="fn">Number</span> {
+        <span class="kw">case</span> <span class="nm">1062</span>: <span class="cm">// ER_DUP_ENTRY</span>
+            <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"중복 키 에러:"</span>, <span class="vr">mysqlErr</span>.<span class="fn">Message</span>)
+        <span class="kw">case</span> <span class="nm">1216</span>, <span class="nm">1217</span>: <span class="cm">// FK 제약 위반</span>
+            <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"외래키 제약 위반"</span>)
+        <span class="kw">case</span> <span class="nm">1205</span>: <span class="cm">// Lock wait timeout</span>
+            <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"Lock 대기 타임아웃"</span>)
+        <span class="kw">case</span> <span class="nm">1213</span>: <span class="cm">// Deadlock</span>
+            <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"데드락 발생 — 재시도 필요"</span>)
+        <span class="kw">default</span>:
+            <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"MySQL 에러 #%d: %s\n"</span>,
+                <span class="vr">mysqlErr</span>.<span class="fn">Number</span>, <span class="vr">mysqlErr</span>.<span class="fn">Message</span>)
+        }
+        <span class="kw">return</span>
+    }
+
+    <span class="cm">// 5. Context 취소/타임아웃</span>
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">context</span>.<span class="fn">DeadlineExceeded</span>) {
+        <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"쿼리 타임아웃"</span>)
+        <span class="kw">return</span>
+    }
+
+    <span class="vr">fmt</span>.<span class="fn">Println</span>(<span class="st">"알 수 없는 에러:"</span>, <span class="vr">err</span>)
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">데드락 재시도 패턴</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">retry.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="kw">const</span> <span class="vr">errDeadlock</span> = <span class="nm">1213</span>
+
+<span class="kw">func</span> <span class="fn">isDeadlock</span>(<span class="vr">err</span> <span class="tp">error</span>) <span class="tp">bool</span> {
+    <span class="kw">var</span> <span class="vr">me</span> *<span class="vr">mysql</span>.<span class="tp">MySQLError</span>
+    <span class="kw">return</span> <span class="vr">errors</span>.<span class="fn">As</span>(<span class="vr">err</span>, &<span class="vr">me</span>) && <span class="vr">me</span>.<span class="fn">Number</span> == <span class="vr">errDeadlock</span>
+}
+
+<span class="kw">func</span> <span class="fn">retryOnDeadlock</span>(<span class="vr">maxRetries</span> <span class="tp">int</span>, <span class="vr">fn</span> <span class="kw">func</span>() <span class="tp">error</span>) <span class="tp">error</span> {
+    <span class="kw">var</span> <span class="vr">err</span> <span class="tp">error</span>
+    <span class="kw">for</span> <span class="vr">i</span> := <span class="nm">0</span>; <span class="vr">i</span> < <span class="vr">maxRetries</span>; <span class="vr">i</span>++ {
+        <span class="vr">err</span> = <span class="fn">fn</span>()
+        <span class="kw">if</span> <span class="vr">err</span> == <span class="kw">nil</span> || !<span class="fn">isDeadlock</span>(<span class="vr">err</span>) {
+            <span class="kw">return</span> <span class="vr">err</span>
+        }
+        <span class="cm">// 지수 백오프로 재시도</span>
+        <span class="vr">time</span>.<span class="fn">Sleep</span>(<span class="vr">time</span>.<span class="fn">Duration</span>(<span class="nm">1</span><<span class="vr">i</span>) * <span class="nm">10</span> * <span class="vr">time</span>.<span class="fn">Millisecond</span>)
+        <span class="vr">fmt</span>.<span class="fn">Printf</span>(<span class="st">"데드락 감지, 재시도 %d/%d\n"</span>, <span class="vr">i</span>+<span class="nm">1</span>, <span class="vr">maxRetries</span>)
+    }
+    <span class="kw">return</span> <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"최대 재시도 초과: %w"</span>, <span class="vr">err</span>)
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 13. Best Practices -->
+    <div class="section" id="best">
+      <div class="section-header">
+        <span class="section-num">13</span>
+        <h2 class="section-title">Best <span class="accent">Practices</span></h2>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">완전한 프로덕션 패턴 예제</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">repository.go</span>
+            <span class="code-lang">go</span>
+          </div>
+          <pre><span class="cm">// Repository 패턴으로 DB 로직 캡슐화</span>
+<span class="kw">type</span> <span class="tp">UserRepository</span> <span class="kw">struct</span> {
+    <span class="vr">db</span>      *<span class="tp">sql.DB</span>
+    <span class="vr">stmtGet</span> *<span class="tp">sql.Stmt</span>
+}
+
+<span class="kw">func</span> <span class="fn">NewUserRepository</span>(<span class="vr">db</span> *<span class="tp">sql.DB</span>) (*<span class="tp">UserRepository</span>, <span class="tp">error</span>) {
+    <span class="vr">stmt</span>, <span class="vr">err</span> := <span class="vr">db</span>.<span class="fn">Prepare</span>(<span class="st">"SELECT id, name, email FROM users WHERE id = ?"</span>)
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> { <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">err</span> }
+    <span class="kw">return</span> &<span class="tp">UserRepository</span>{<span class="vr">db</span>: <span class="vr">db</span>, <span class="vr">stmtGet</span>: <span class="vr">stmt</span>}, <span class="kw">nil</span>
+}
+
+<span class="kw">func</span> (<span class="vr">r</span> *<span class="tp">UserRepository</span>) <span class="fn">Close</span>() { <span class="vr">r</span>.<span class="vr">stmtGet</span>.<span class="fn">Close</span>() }
+
+<span class="kw">func</span> (<span class="vr">r</span> *<span class="tp">UserRepository</span>) <span class="fn">GetByID</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">id</span> <span class="tp">int</span>) (*<span class="tp">User</span>, <span class="tp">error</span>) {
+    <span class="kw">var</span> <span class="vr">u</span> <span class="tp">User</span>
+    <span class="vr">err</span> := <span class="vr">r</span>.<span class="vr">stmtGet</span>.<span class="fn">QueryRowContext</span>(<span class="vr">ctx</span>, <span class="vr">id</span>).<span class="fn">Scan</span>(&<span class="vr">u</span>.<span class="tp">ID</span>, &<span class="vr">u</span>.<span class="tp">Name</span>, &<span class="vr">u</span>.<span class="tp">Email</span>)
+    <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">Is</span>(<span class="vr">err</span>, <span class="vr">sql</span>.<span class="fn">ErrNoRows</span>) {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"user %d: not found"</span>, <span class="vr">id</span>)
+    }
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="kw">nil</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"GetByID %d: %w"</span>, <span class="vr">id</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">return</span> &<span class="vr">u</span>, <span class="kw">nil</span>
+}
+
+<span class="kw">func</span> (<span class="vr">r</span> *<span class="tp">UserRepository</span>) <span class="fn">Create</span>(<span class="vr">ctx</span> <span class="vr">context</span>.<span class="tp">Context</span>, <span class="vr">u</span> *<span class="tp">User</span>) (<span class="tp">int64</span>, <span class="tp">error</span>) {
+    <span class="vr">res</span>, <span class="vr">err</span> := <span class="vr">r</span>.<span class="vr">db</span>.<span class="fn">ExecContext</span>(<span class="vr">ctx</span>,
+        <span class="st">"INSERT INTO users (name, email) VALUES (?, ?)"</span>,
+        <span class="vr">u</span>.<span class="tp">Name</span>, <span class="vr">u</span>.<span class="tp">Email</span>,
+    )
+    <span class="kw">if</span> <span class="vr">err</span> != <span class="kw">nil</span> {
+        <span class="kw">var</span> <span class="vr">me</span> *<span class="vr">mysql</span>.<span class="tp">MySQLError</span>
+        <span class="kw">if</span> <span class="vr">errors</span>.<span class="fn">As</span>(<span class="vr">err</span>, &<span class="vr">me</span>) && <span class="vr">me</span>.<span class="fn">Number</span> == <span class="nm">1062</span> {
+            <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"email already exists"</span>)
+        }
+        <span class="kw">return</span> <span class="nm">0</span>, <span class="vr">fmt</span>.<span class="fn">Errorf</span>(<span class="st">"Create: %w"</span>, <span class="vr">err</span>)
+    }
+    <span class="kw">return</span> <span class="vr">res</span>.<span class="fn">LastInsertId</span>()
+}</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">핵심 체크리스트</div>
+        <ul class="styled">
+          <li><strong>sql.DB는 전역으로 재사용</strong> — 요청마다 Open/Close하지 않습니다. 한 번 Open 후 프로그램 전체에서 공유합니다.</li>
+          <li><strong>항상 defer rows.Close()</strong> — Query() 호출 직후 반드시 작성. 커넥션 누수 방지의 핵심입니다.</li>
+          <li><strong>rows.Err() 확인 필수</strong> — rows.Next() 반복 후 반드시 rows.Err()를 체크해 중간 에러를 감지합니다.</li>
+          <li><strong>플레이스홀더(?) 사용</strong> — 문자열 포매팅으로 쿼리를 구성하지 않습니다. SQL Injection의 원인이 됩니다.</li>
+          <li><strong>Context 버전 메서드 사용</strong> — 모든 쿼리에 Context를 전달해 타임아웃과 취소를 지원합니다.</li>
+          <li><strong>트랜잭션에서 defer Rollback</strong> — Commit 성공 이후엔 no-op이 되므로 항상 defer로 안전망을 유지합니다.</li>
+          <li><strong>커넥션 풀 튜닝</strong> — MaxOpenConns를 MySQL max_connections의 80% 이하로, ConnMaxLifetime을 wait_timeout 이하로 설정합니다.</li>
+          <li><strong>에러 래핑</strong> — fmt.Errorf("context: %w", err)로 에러 컨텍스트를 유지합니다.</li>
+        </ul>
+      </div>
+
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div><strong>sqlx 라이브러리 고려</strong><br>
+        구조체 태그 기반 자동 매핑, Named Query, 편리한 스캔 등이 필요하다면
+        <code>github.com/jmoiron/sqlx</code>를 고려하세요. 표준 <code>database/sql</code>과
+        완전히 호환되며 보일러플레이트를 크게 줄여줍니다.</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div>Go <code>database/sql</code> × MySQL 완전 가이드</div>
+  <div>
+    <a href="https://pkg.go.dev/database/sql" target="_blank">pkg.go.dev/database/sql</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/go-sql-driver/mysql" target="_blank">go-sql-driver/mysql</a>
+  </div>
+</footer>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('.section[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Smooth scroll
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (href && href.startsWith('#')) {
+        e.preventDefault();
+        document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

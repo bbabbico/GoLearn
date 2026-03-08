@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go 언어 완전 가이드</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Syne:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #161c2a;
+    --border: #1e2a3a;
+    --go-blue: #00acd7;
+    --go-blue2: #007d9c;
+    --go-cyan: #5dc9e2;
+    --accent: #f0c674;
+    --green: #6bdd9a;
+    --red: #ff6b8a;
+    --purple: #b48eed;
+    --text: #cdd6e8;
+    --text-dim: #6b7c99;
+    --text-bright: #edf2ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    padding: 60px 24px;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 172, 215, 0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 80% 80%, rgba(93, 201, 226, 0.06) 0%, transparent 60%);
+  }
+
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,172,215,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,172,215,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+  }
+
+  .go-gopher {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: float 4s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--go-blue);
+    background: rgba(0,172,215,0.1);
+    border: 1px solid rgba(0,172,215,0.25);
+    padding: 4px 14px;
+    border-radius: 2px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(48px, 10vw, 96px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    color: var(--text-bright);
+    position: relative;
+    z-index: 1;
+    margin-bottom: 10px;
+  }
+
+  h1 span { color: var(--go-blue); }
+
+  .hero-sub {
+    font-size: clamp(16px, 3vw, 20px);
+    color: var(--text-dim);
+    max-width: 600px;
+    margin: 20px auto 40px;
+    position: relative;
+    z-index: 1;
+    font-weight: 300;
+  }
+
+  .hero-tags {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tag {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+  .tag-blue { color: var(--go-blue); border-color: rgba(0,172,215,0.3); background: rgba(0,172,215,0.06); }
+  .tag-green { color: var(--green); border-color: rgba(107,221,154,0.3); background: rgba(107,221,154,0.06); }
+  .tag-yellow { color: var(--accent); border-color: rgba(240,198,116,0.3); background: rgba(240,198,116,0.06); }
+  .tag-purple { color: var(--purple); border-color: rgba(180,142,237,0.3); background: rgba(180,142,237,0.06); }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,14,20,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 12px 0;
+  }
+
+  .nav-inner::-webkit-scrollbar { display: none; }
+
+  nav a {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 2px;
+    white-space: nowrap;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  nav a:hover { color: var(--go-blue); background: rgba(0,172,215,0.08); }
+
+  /* MAIN */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+
+  section { margin-bottom: 100px; }
+
+  .section-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--go-blue);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    max-width: 60px;
+    height: 1px;
+    background: var(--go-blue);
+    opacity: 0.4;
+  }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1.15;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+  }
+
+  h2 span { color: var(--go-blue); }
+
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 36px 0 14px;
+    padding-left: 14px;
+    border-left: 3px solid var(--go-blue);
+  }
+
+  p { color: var(--text); margin-bottom: 14px; }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--go-blue), var(--go-cyan));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover { border-color: rgba(0,172,215,0.3); transform: translateY(-2px); }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon { font-size: 28px; margin-bottom: 14px; }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .card p { font-size: 13px; color: var(--text-dim); margin: 0; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 20px 0 28px;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green { background: #28c840; }
+
+  .code-filename {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+
+  pre {
+    padding: 24px;
+    overflow-x: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.9;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  pre::-webkit-scrollbar { height: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+  pre::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Syntax highlighting */
+  .kw { color: #ff7b72; } /* keywords */
+  .fn { color: var(--go-cyan); } /* functions */
+  .str { color: var(--green); } /* strings */
+  .num { color: var(--accent); } /* numbers */
+  .cm { color: #5a6e8a; font-style: italic; } /* comments */
+  .tp { color: var(--purple); } /* types */
+  .pkg { color: var(--accent); } /* packages */
+  .op { color: #ff9d4d; } /* operators */
+
+  /* INTERNAL MECHANICS */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 28px 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pipe-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 20px;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--text-bright);
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .pipe-box:hover { border-color: var(--go-blue); color: var(--go-blue); }
+
+  .pipe-box .pipe-sub {
+    display: block;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 3px;
+  }
+
+  .pipe-arrow {
+    color: var(--go-blue);
+    font-size: 18px;
+    opacity: 0.6;
+  }
+
+  /* INFO BOX */
+  .info-box {
+    background: rgba(0,172,215,0.06);
+    border: 1px solid rgba(0,172,215,0.2);
+    border-left: 3px solid var(--go-blue);
+    padding: 18px 22px;
+    border-radius: 0 4px 4px 0;
+    margin: 20px 0;
+  }
+
+  .info-box-title {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--go-blue);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .info-box p { margin: 0; font-size: 13px; color: var(--text); }
+
+  .warn-box {
+    background: rgba(240,198,116,0.06);
+    border: 1px solid rgba(240,198,116,0.2);
+    border-left: 3px solid var(--accent);
+    padding: 18px 22px;
+    border-radius: 0 4px 4px 0;
+    margin: 20px 0;
+  }
+
+  .warn-box .info-box-title { color: var(--accent); }
+
+  /* FEATURE TABLE */
+  .feature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  @media (max-width: 640px) {
+    .feature-row { grid-template-columns: 1fr; }
+    .pipeline { justify-content: center; }
+    .pipe-arrow { transform: rotate(90deg); }
+  }
+
+  .feature-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+
+  .feature-col h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .feature-col ul { list-style: none; }
+  .feature-col li {
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+  .feature-col li:last-child { border: none; }
+  .feature-col li::before { content: '→'; color: var(--go-blue); font-family: monospace; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  footer p {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  footer a { color: var(--go-blue); text-decoration: none; }
+
+  /* SCROLL ANIMATIONS */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* GOROUTINE VISUAL */
+  .goroutine-demo {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+
+  .goroutine-pill {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(0,172,215,0.3);
+    background: rgba(0,172,215,0.06);
+    color: var(--go-cyan);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .goroutine-pill:nth-child(2) { animation-delay: 0.3s; }
+  .goroutine-pill:nth-child(3) { animation-delay: 0.6s; }
+  .goroutine-pill:nth-child(4) { animation-delay: 0.9s; }
+  .goroutine-pill:nth-child(5) { animation-delay: 1.2s; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* INLINE CODE */
+  code {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    background: rgba(0,172,215,0.1);
+    color: var(--go-cyan);
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid rgba(0,172,215,0.15);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="grid-overlay"></div>
+  <div class="go-gopher">🦫</div>
+  <div class="hero-badge">Programming Language</div>
+  <h1><span>Go</span> Language</h1>
+  <p class="hero-sub">구글이 만든 현대적인 시스템 프로그래밍 언어 — 빠르고, 간결하며, 동시성에 강하다.</p>
+  <div class="hero-tags">
+    <span class="tag tag-blue">컴파일 언어</span>
+    <span class="tag tag-green">정적 타입</span>
+    <span class="tag tag-yellow">가비지 컬렉션</span>
+    <span class="tag tag-purple">고루틴 동시성</span>
+    <span class="tag tag-blue">CGo FFI</span>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#intro">소개</a>
+    <a href="#internals">내부 동작</a>
+    <a href="#syntax">기본 문법</a>
+    <a href="#concurrency">동시성</a>
+    <a href="#cgo">C 언어 FFI</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- INTRO -->
+<section id="intro" class="fade-up">
+  <div class="section-label">01 — Introduction</div>
+  <h2>Go 언어 <span>소개</span></h2>
+  <p>Go(또는 Golang)는 2009년 구글의 Robert Griesemer, Rob Pike, Ken Thompson에 의해 설계된 오픈소스 프로그래밍 언어입니다. C의 성능과 Python의 생산성을 결합하겠다는 목표로 시작되었으며, 현재 Kubernetes, Docker, Terraform 등 핵심 인프라 프로젝트에 광범위하게 사용됩니다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">빠른 컴파일</div>
+      <p>정적 링크와 최적화된 컴파일러로 수백만 줄 코드도 수 초 내에 빌드됩니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <div class="card-title">정적 타입 시스템</div>
+      <p>컴파일 타임에 타입 오류를 검출해 런타임 버그를 사전에 방지합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔄</div>
+      <div class="card-title">고루틴 동시성</div>
+      <p>경량 스레드인 Goroutine으로 수만 개의 동시 작업을 효율적으로 처리합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🗑️</div>
+      <div class="card-title">가비지 컬렉션</div>
+      <p>트라이컬러 마크-스윕 GC로 메모리를 자동 관리, STW(Stop-The-World) 시간을 최소화합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <div class="card-title">단일 바이너리</div>
+      <p>외부 런타임 없이 단일 실행 파일로 컴파일됩니다. 배포가 극도로 단순합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔗</div>
+      <div class="card-title">C 상호 운용</div>
+      <p>CGo를 통해 C 라이브러리를 직접 호출할 수 있어 기존 에코시스템을 활용합니다.</p>
+    </div>
+  </div>
+
+  <div class="feature-row" style="margin-top:32px">
+    <div class="feature-col">
+      <h4>🟢 Go가 잘하는 것</h4>
+      <ul>
+        <li>네트워크 서버 / 마이크로서비스</li>
+        <li>CLI 도구 및 시스템 유틸리티</li>
+        <li>컨테이너 / 클라우드 인프라</li>
+        <li>고성능 데이터 파이프라인</li>
+        <li>분산 시스템 구축</li>
+      </ul>
+    </div>
+    <div class="feature-col">
+      <h4>🔴 Go가 약한 것</h4>
+      <ul>
+        <li>GUI 데스크탑 애플리케이션</li>
+        <li>수치 계산 / ML (Python 대비)</li>
+        <li>임베디드 / 베어메탈 (Rust 대비)</li>
+        <li>고급 제네릭 프로그래밍 패턴</li>
+        <li>브라우저 내 실행 (제한적)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- INTERNALS -->
+<section id="internals" class="fade-up">
+  <div class="section-label">02 — Internals</div>
+  <h2>내부 <span>동작 원리</span></h2>
+
+  <h3>컴파일 파이프라인</h3>
+  <p>Go 소스코드는 <code>go build</code> 명령어 하나로 네이티브 바이너리로 변환됩니다.</p>
+
+  <div class="pipeline">
+    <div class="pipe-box">📄 .go 소스<span class="pipe-sub">Source</span></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">🔍 Lexer/Parser<span class="pipe-sub">AST 생성</span></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">✅ 타입 체커<span class="pipe-sub">Type Checking</span></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">⚙️ SSA 변환<span class="pipe-sub">최적화</span></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">🔧 코드 생성<span class="pipe-sub">Machine Code</span></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">🔗 링커<span class="pipe-sub">Binary</span></div>
+  </div>
+
+  <h3>고루틴과 스케줄러 (GMP 모델)</h3>
+  <p>Go의 동시성은 GMP 스케줄러로 구현됩니다. OS 스레드를 직접 사용하는 대신 경량의 고루틴을 M:N 방식으로 스케줄링합니다.</p>
+
+  <div class="goroutine-demo">
+    <span class="goroutine-pill">goroutine 1</span>
+    <span class="goroutine-pill">goroutine 2</span>
+    <span class="goroutine-pill">goroutine 3</span>
+    <span class="goroutine-pill">goroutine 4</span>
+    <span class="goroutine-pill">goroutine 5</span>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-col">
+      <h4>GMP 구성 요소</h4>
+      <ul>
+        <li><strong style="color:var(--go-cyan)">G (Goroutine)</strong> — 실행 단위, ~2KB 스택</li>
+        <li><strong style="color:var(--go-cyan)">M (Machine)</strong> — OS 스레드 래퍼</li>
+        <li><strong style="color:var(--go-cyan)">P (Processor)</strong> — 논리 프로세서, 로컬 런큐 보유</li>
+        <li>Work Stealing으로 부하 분산</li>
+        <li>GOMAXPROCS로 P 수 제어</li>
+      </ul>
+    </div>
+    <div class="feature-col">
+      <h4>고루틴 스택</h4>
+      <ul>
+        <li>초기 스택 2KB (OS 스레드 ~1MB 대비)</li>
+        <li>필요 시 동적으로 성장 (최대 1GB)</li>
+        <li>연속 스택 전략 사용</li>
+        <li>채널 통신으로 동기화</li>
+        <li>select로 복수 채널 처리</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>가비지 컬렉터</h3>
+  <p>Go GC는 트라이컬러 마크-스윕(Tri-color Mark and Sweep) 알고리즘을 사용하며 대부분의 작업이 애플리케이션과 병렬로 실행됩니다.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">⚪ White (미방문)</div>
+      <p style="font-size:13px">아직 방문하지 않은 객체. GC 사이클 완료 후 흰색으로 남은 객체는 수거됩니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🔘 Gray (처리 중)</div>
+      <p style="font-size:13px">방문했지만 참조 대상을 아직 검사하지 않은 객체. 워크리스트에 대기 중입니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">⚫ Black (완료)</div>
+      <p style="font-size:13px">해당 객체와 모든 참조 대상 검사 완료. 이번 사이클에서 수거되지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top:24px">
+    <div class="info-box-title">💡 메모리 관리 팁</div>
+    <p>Go에서 변수가 힙에 할당될지 스택에 할당될지는 <strong>이스케이프 분석(Escape Analysis)</strong>으로 결정됩니다. <code>go build -gcflags="-m"</code> 옵션으로 이스케이프 분석 결과를 확인할 수 있습니다.</p>
+  </div>
+</section>
+
+<!-- SYNTAX -->
+<section id="syntax" class="fade-up">
+  <div class="section-label">03 — Syntax</div>
+  <h2>기본 <span>문법</span></h2>
+
+  <h3>변수 선언과 기본 타입</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">variables.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// var 키워드로 명시적 선언</span>
+    <span class="kw">var</span> name <span class="tp">string</span> <span class="op">=</span> <span class="str">"Gopher"</span>
+    <span class="kw">var</span> age  <span class="tp">int</span>    <span class="op">=</span> <span class="num">13</span>
+    <span class="kw">var</span> pi   <span class="tp">float64</span> <span class="op">=</span> <span class="num">3.14159</span>
+    <span class="kw">var</span> ok   <span class="tp">bool</span>   <span class="op">=</span> <span class="kw">true</span>
+
+    <span class="cm">// := 단축 선언 (함수 내부에서만 사용 가능)</span>
+    city <span class="op">:=</span> <span class="str">"Seoul"</span>
+    score <span class="op">:=</span> <span class="num">98.5</span>
+
+    <span class="cm">// 다중 선언</span>
+    x, y, z <span class="op">:=</span> <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>
+
+    <span class="cm">// 상수</span>
+    <span class="kw">const</span> MaxSize <span class="op">=</span> <span class="num">1024</span>
+    <span class="kw">const</span> Pi <span class="tp">float64</span> <span class="op">=</span> <span class="num">3.14159265358979</span>
+
+    <span class="fn">fmt.Printf</span>(<span class="str">"%s(%d)는 %s에 삽니다. score=%.1f\n"</span>, name, age, city, score)
+    _ <span class="op">=</span> pi; _ <span class="op">=</span> ok; _ <span class="op">=</span> x; _ <span class="op">=</span> y; _ <span class="op">=</span> z; _ <span class="op">=</span> MaxSize
+}</pre>
+  </div>
+
+  <h3>배열, 슬라이스, 맵</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">collections.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// 배열 — 고정 길이</span>
+    <span class="kw">var</span> arr [<span class="num">3</span>]<span class="tp">int</span> <span class="op">=</span> [<span class="num">3</span>]<span class="tp">int</span>{<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>}
+    <span class="fn">fmt.Println</span>(arr[<span class="num">0</span>]) <span class="cm">// 10</span>
+
+    <span class="cm">// 슬라이스 — 동적 배열, Go에서 가장 많이 쓰임</span>
+    nums <span class="op">:=</span> []<span class="tp">int</span>{<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>}
+    nums <span class="op">=</span> <span class="fn">append</span>(nums, <span class="num">6</span>)       <span class="cm">// 원소 추가</span>
+    sub <span class="op">:=</span> nums[<span class="num">1</span>:<span class="num">4</span>]               <span class="cm">// 슬라이싱: [2 3 4]</span>
+    <span class="fn">fmt.Println</span>(sub)
+
+    <span class="cm">// make로 슬라이스 생성 (len=0, cap=10)</span>
+    s <span class="op">:=</span> <span class="fn">make</span>([]<span class="tp">string</span>, <span class="num">0</span>, <span class="num">10</span>)
+    s <span class="op">=</span> <span class="fn">append</span>(s, <span class="str">"Go"</span>, <span class="str">"Rust"</span>, <span class="str">"C"</span>)
+
+    <span class="cm">// 맵 — key-value 자료구조</span>
+    scores <span class="op">:=</span> <span class="kw">map</span>[<span class="tp">string</span>]<span class="tp">int</span>{
+        <span class="str">"Alice"</span>: <span class="num">95</span>,
+        <span class="str">"Bob"</span>:   <span class="num">82</span>,
+    }
+    scores[<span class="str">"Charlie"</span>] <span class="op">=</span> <span class="num">91</span>
+
+    <span class="cm">// 값 존재 여부 확인 (ok idiom)</span>
+    val, ok <span class="op">:=</span> scores[<span class="str">"Dave"</span>]
+    <span class="kw">if</span> !ok {
+        <span class="fn">fmt.Println</span>(<span class="str">"Dave 없음, 기본값:"</span>, val)
+    }
+}</pre>
+  </div>
+
+  <h3>조건문과 반복문</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">control.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="kw">func</span> <span class="fn">classify</span>(n <span class="tp">int</span>) <span class="tp">string</span> {
+    <span class="cm">// if 초기화 구문 지원</span>
+    <span class="kw">if</span> rem <span class="op">:=</span> n <span class="op">%</span> <span class="num">2</span>; rem <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="str">"짝수"</span>
+    } <span class="kw">else</span> {
+        <span class="kw">return</span> <span class="str">"홀수"</span>
+    }
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// Go에는 while이 없다 — for로 통일</span>
+    <span class="kw">for</span> i <span class="op">:=</span> <span class="num">0</span>; i <span class="op">&lt;</span> <span class="num">5</span>; i<span class="op">++</span> {
+        <span class="fn">fmt.Printf</span>(<span class="str">"%d는 %s\n"</span>, i, <span class="fn">classify</span>(i))
+    }
+
+    <span class="cm">// while처럼 사용</span>
+    n <span class="op">:=</span> <span class="num">1</span>
+    <span class="kw">for</span> n <span class="op">&lt;</span> <span class="num">128</span> {
+        n <span class="op">*=</span> <span class="num">2</span>
+    }
+
+    <span class="cm">// range로 슬라이스 순회</span>
+    fruits <span class="op">:=</span> []<span class="tp">string</span>{<span class="str">"🍎"</span>, <span class="str">"🍊"</span>, <span class="str">"🍋"</span>}
+    <span class="kw">for</span> idx, fruit <span class="op">:=</span> <span class="kw">range</span> fruits {
+        <span class="fn">fmt.Printf</span>(<span class="str">"[%d] %s\n"</span>, idx, fruit)
+    }
+
+    <span class="cm">// switch — fallthrough 없음이 기본</span>
+    day <span class="op">:=</span> <span class="str">"토요일"</span>
+    <span class="kw">switch</span> day {
+    <span class="kw">case</span> <span class="str">"토요일"</span>, <span class="str">"일요일"</span>:
+        <span class="fn">fmt.Println</span>(<span class="str">"주말!"</span>)
+    <span class="kw">default</span>:
+        <span class="fn">fmt.Println</span>(<span class="str">"평일"</span>)
+    }
+}</pre>
+  </div>
+
+  <h3>함수</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">functions.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> (
+    <span class="str">"errors"</span>
+    <span class="str">"fmt"</span>
+)
+
+<span class="cm">// 다중 반환값 — Go의 핵심 패턴</span>
+<span class="kw">func</span> <span class="fn">divide</span>(a, b <span class="tp">float64</span>) (<span class="tp">float64</span>, <span class="tp">error</span>) {
+    <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="num">0</span>, <span class="fn">errors.New</span>(<span class="str">"0으로 나눌 수 없습니다"</span>)
+    }
+    <span class="kw">return</span> a <span class="op">/</span> b, <span class="kw">nil</span>
+}
+
+<span class="cm">// 가변 인자 (variadic)</span>
+<span class="kw">func</span> <span class="fn">sum</span>(nums ...<span class="tp">int</span>) <span class="tp">int</span> {
+    total <span class="op">:=</span> <span class="num">0</span>
+    <span class="kw">for</span> _, n <span class="op">:=</span> <span class="kw">range</span> nums {
+        total <span class="op">+=</span> n
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="cm">// 클로저</span>
+<span class="kw">func</span> <span class="fn">counter</span>() <span class="kw">func</span>() <span class="tp">int</span> {
+    count <span class="op">:=</span> <span class="num">0</span>
+    <span class="kw">return func</span>() <span class="tp">int</span> {
+        count<span class="op">++</span>
+        <span class="kw">return</span> count
+    }
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    result, err <span class="op">:=</span> <span class="fn">divide</span>(<span class="num">10</span>, <span class="num">3</span>)
+    <span class="kw">if</span> err <span class="op">!=</span> <span class="kw">nil</span> {
+        <span class="fn">fmt.Println</span>(<span class="str">"에러:"</span>, err)
+    } <span class="kw">else</span> {
+        <span class="fn">fmt.Printf</span>(<span class="str">"결과: %.4f\n"</span>, result)
+    }
+
+    <span class="fn">fmt.Println</span>(<span class="fn">sum</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>)) <span class="cm">// 15</span>
+
+    c <span class="op">:=</span> <span class="fn">counter</span>()
+    <span class="fn">fmt.Println</span>(<span class="fn">c</span>(), <span class="fn">c</span>(), <span class="fn">c</span>()) <span class="cm">// 1 2 3</span>
+}</pre>
+  </div>
+
+  <h3>구조체와 인터페이스</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">oop.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> (
+    <span class="str">"fmt"</span>
+    <span class="str">"math"</span>
+)
+
+<span class="cm">// 인터페이스 정의</span>
+<span class="kw">type</span> <span class="tp">Shape</span> <span class="kw">interface</span> {
+    <span class="fn">Area</span>() <span class="tp">float64</span>
+    <span class="fn">Perimeter</span>() <span class="tp">float64</span>
+}
+
+<span class="cm">// 구조체</span>
+<span class="kw">type</span> <span class="tp">Circle</span> <span class="kw">struct</span> {
+    Radius <span class="tp">float64</span>
+}
+
+<span class="kw">type</span> <span class="tp">Rectangle</span> <span class="kw">struct</span> {
+    Width, Height <span class="tp">float64</span>
+}
+
+<span class="cm">// 메서드 구현 (포인터 리시버)</span>
+<span class="kw">func</span> (c <span class="op">*</span><span class="tp">Circle</span>) <span class="fn">Area</span>() <span class="tp">float64</span> {
+    <span class="kw">return</span> math.Pi <span class="op">*</span> c.Radius <span class="op">*</span> c.Radius
+}
+<span class="kw">func</span> (c <span class="op">*</span><span class="tp">Circle</span>) <span class="fn">Perimeter</span>() <span class="tp">float64</span> {
+    <span class="kw">return</span> <span class="num">2</span> <span class="op">*</span> math.Pi <span class="op">*</span> c.Radius
+}
+<span class="kw">func</span> (r <span class="op">*</span><span class="tp">Rectangle</span>) <span class="fn">Area</span>() <span class="tp">float64</span> {
+    <span class="kw">return</span> r.Width <span class="op">*</span> r.Height
+}
+<span class="kw">func</span> (r <span class="op">*</span><span class="tp">Rectangle</span>) <span class="fn">Perimeter</span>() <span class="tp">float64</span> {
+    <span class="kw">return</span> <span class="num">2</span> <span class="op">*</span> (r.Width <span class="op">+</span> r.Height)
+}
+
+<span class="cm">// 인터페이스를 파라미터로 받는 함수</span>
+<span class="kw">func</span> <span class="fn">printShape</span>(s <span class="tp">Shape</span>) {
+    <span class="fn">fmt.Printf</span>(<span class="str">"넓이: %.2f, 둘레: %.2f\n"</span>, s.<span class="fn">Area</span>(), s.<span class="fn">Perimeter</span>())
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    shapes <span class="op">:=</span> []<span class="tp">Shape</span>{
+        <span class="op">&amp;</span><span class="tp">Circle</span>{Radius: <span class="num">5</span>},
+        <span class="op">&amp;</span><span class="tp">Rectangle</span>{Width: <span class="num">4</span>, Height: <span class="num">6</span>},
+    }
+    <span class="kw">for</span> _, s <span class="op">:=</span> <span class="kw">range</span> shapes {
+        <span class="fn">printShape</span>(s)
+    }
+}</pre>
+  </div>
+
+  <h3>에러 처리와 defer</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">errors.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> (
+    <span class="str">"fmt"</span>
+    <span class="str">"os"</span>
+)
+
+<span class="kw">func</span> <span class="fn">readFile</span>(path <span class="tp">string</span>) (<span class="tp">string</span>, <span class="tp">error</span>) {
+    f, err <span class="op">:=</span> os.<span class="fn">Open</span>(path)
+    <span class="kw">if</span> err <span class="op">!=</span> <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="str">""</span>, <span class="fn">fmt.Errorf</span>(<span class="str">"파일 열기 실패: %w"</span>, err) <span class="cm">// %w로 에러 래핑</span>
+    }
+    <span class="kw">defer</span> f.<span class="fn">Close</span>() <span class="cm">// 함수 종료 시 자동 실행 — 리소스 정리에 필수</span>
+
+    buf <span class="op">:=</span> <span class="fn">make</span>([]<span class="tp">byte</span>, <span class="num">1024</span>)
+    n, err <span class="op">:=</span> f.<span class="fn">Read</span>(buf)
+    <span class="kw">if</span> err <span class="op">!=</span> <span class="kw">nil</span> {
+        <span class="kw">return</span> <span class="str">""</span>, err
+    }
+    <span class="kw">return</span> <span class="tp">string</span>(buf[:<span class="num">n</span>]), <span class="kw">nil</span>
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// defer는 LIFO 순서로 실행</span>
+    <span class="kw">defer</span> <span class="fn">fmt.Println</span>(<span class="str">"3: 마지막"</span>)
+    <span class="kw">defer</span> <span class="fn">fmt.Println</span>(<span class="str">"2: 중간"</span>)
+    <span class="kw">defer</span> <span class="fn">fmt.Println</span>(<span class="str">"1: 처음"</span>)
+    <span class="fn">fmt.Println</span>(<span class="str">"실행 중..."</span>)
+
+    content, err <span class="op">:=</span> <span class="fn">readFile</span>(<span class="str">"test.txt"</span>)
+    <span class="kw">if</span> err <span class="op">!=</span> <span class="kw">nil</span> {
+        <span class="fn">fmt.Println</span>(<span class="str">"에러:"</span>, err)
+        <span class="kw">return</span>
+    }
+    <span class="fn">fmt.Println</span>(content)
+}</pre>
+  </div>
+
+  <div class="warn-box">
+    <div class="info-box-title">⚠️ Go 에러 처리 철학</div>
+    <p>Go는 예외(exception) 대신 에러를 <strong>값</strong>으로 반환합니다. <code>if err != nil</code> 패턴이 반복적으로 보이는 건 의도적인 설계입니다 — 에러를 명시적으로 처리하도록 강제해 숨겨진 제어 흐름을 없앱니다.</p>
+  </div>
+</section>
+
+<!-- CONCURRENCY -->
+<section id="concurrency" class="fade-up">
+  <div class="section-label">04 — Concurrency</div>
+  <h2>동시성 — <span>고루틴과 채널</span></h2>
+
+  <h3>고루틴 기본</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">goroutine.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> (
+    <span class="str">"fmt"</span>
+    <span class="str">"sync"</span>
+)
+
+<span class="kw">func</span> <span class="fn">worker</span>(id <span class="tp">int</span>, wg <span class="op">*</span><span class="tp">sync.WaitGroup</span>) {
+    <span class="kw">defer</span> wg.<span class="fn">Done</span>() <span class="cm">// 완료 시 카운터 감소</span>
+    <span class="fn">fmt.Printf</span>(<span class="str">"Worker %d 시작\n"</span>, id)
+    <span class="cm">// 실제로는 여기서 무거운 작업 수행</span>
+    <span class="fn">fmt.Printf</span>(<span class="str">"Worker %d 완료\n"</span>, id)
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> wg <span class="tp">sync.WaitGroup</span>
+
+    <span class="kw">for</span> i <span class="op">:=</span> <span class="num">1</span>; i <span class="op">&lt;=</span> <span class="num">5</span>; i<span class="op">++</span> {
+        wg.<span class="fn">Add</span>(<span class="num">1</span>)
+        <span class="kw">go</span> <span class="fn">worker</span>(i, <span class="op">&amp;</span>wg) <span class="cm">// go 키워드 하나로 고루틴 시작</span>
+    }
+
+    wg.<span class="fn">Wait</span>() <span class="cm">// 모든 고루틴 완료 대기</span>
+    <span class="fn">fmt.Println</span>(<span class="str">"모든 작업 완료"</span>)
+}</pre>
+  </div>
+
+  <h3>채널을 이용한 통신</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">channels.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="cm">// 생산자: 채널에 데이터 전송</span>
+<span class="kw">func</span> <span class="fn">generate</span>(nums ...<span class="tp">int</span>) <span class="op">&lt;-</span><span class="kw">chan</span> <span class="tp">int</span> {
+    out <span class="op">:=</span> <span class="fn">make</span>(<span class="kw">chan</span> <span class="tp">int</span>)
+    <span class="kw">go func</span>() {
+        <span class="kw">for</span> _, n <span class="op">:=</span> <span class="kw">range</span> nums {
+            out <span class="op">&lt;-</span> n <span class="cm">// 채널로 전송</span>
+        }
+        <span class="fn">close</span>(out) <span class="cm">// 전송 완료 시 닫기</span>
+    }()
+    <span class="kw">return</span> out
+}
+
+<span class="cm">// 소비자: 채널에서 데이터 수신하여 제곱</span>
+<span class="kw">func</span> <span class="fn">square</span>(in <span class="op">&lt;-</span><span class="kw">chan</span> <span class="tp">int</span>) <span class="op">&lt;-</span><span class="kw">chan</span> <span class="tp">int</span> {
+    out <span class="op">:=</span> <span class="fn">make</span>(<span class="kw">chan</span> <span class="tp">int</span>)
+    <span class="kw">go func</span>() {
+        <span class="kw">for</span> n <span class="op">:=</span> <span class="kw">range</span> in { <span class="cm">// 채널이 닫힐 때까지 수신</span>
+            out <span class="op">&lt;-</span> n <span class="op">*</span> n
+        }
+        <span class="fn">close</span>(out)
+    }()
+    <span class="kw">return</span> out
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// 파이프라인 패턴</span>
+    c1 <span class="op">:=</span> <span class="fn">generate</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>)
+    c2 <span class="op">:=</span> <span class="fn">square</span>(c1)
+    <span class="kw">for</span> n <span class="op">:=</span> <span class="kw">range</span> c2 {
+        <span class="fn">fmt.Println</span>(n) <span class="cm">// 4, 9, 16, 25</span>
+    }
+
+    <span class="cm">// select — 복수 채널 동시 대기</span>
+    ch1 <span class="op">:=</span> <span class="fn">make</span>(<span class="kw">chan</span> <span class="tp">string</span>, <span class="num">1</span>)
+    ch2 <span class="op">:=</span> <span class="fn">make</span>(<span class="kw">chan</span> <span class="tp">string</span>, <span class="num">1</span>)
+    ch1 <span class="op">&lt;-</span> <span class="str">"from ch1"</span>
+    ch2 <span class="op">&lt;-</span> <span class="str">"from ch2"</span>
+
+    <span class="kw">select</span> {
+    <span class="kw">case</span> msg <span class="op">:=</span> <span class="op">&lt;-</span>ch1:
+        <span class="fn">fmt.Println</span>(msg)
+    <span class="kw">case</span> msg <span class="op">:=</span> <span class="op">&lt;-</span>ch2:
+        <span class="fn">fmt.Println</span>(msg)
+    }
+}</pre>
+  </div>
+
+  <div class="info-box">
+    <div class="info-box-title">💡 Go 동시성 격언</div>
+    <p><em>"공유 메모리를 이용해 통신하지 말고, 통신을 이용해 메모리를 공유하라."</em><br>— Go 팀의 핵심 철학. 뮤텍스 대신 채널을 통해 데이터를 전달하는 방식을 권장합니다.</p>
+  </div>
+</section>
+
+<!-- CGO -->
+<section id="cgo" class="fade-up">
+  <div class="section-label">05 — FFI with C</div>
+  <h2>C 언어와 <span>CGo FFI</span></h2>
+  <p>CGo는 Go 코드에서 C 코드를 직접 호출할 수 있게 해주는 Go의 내장 외부 함수 인터페이스(FFI)입니다. C 라이브러리 재사용, 성능 임계 코드 최적화, OS 시스템 콜 직접 접근 등에 활용됩니다.</p>
+
+  <h3>기본 CGo 사용법</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">basic_cgo.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="cm">/*
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+// C 함수 정의 (Go 파일 안에 직접 작성 가능)
+int add(int a, int b) {
+    return a + b;
+}
+
+void greet(const char* name) {
+    printf("Hello from C, %s!\n", name);
+}
+*/</span>
+<span class="kw">import</span> <span class="str">"C"</span> <span class="cm">// 주석 바로 아래에 위치해야 함 (빈 줄 없이)</span>
+
+<span class="kw">import</span> (
+    <span class="str">"fmt"</span>
+    <span class="str">"unsafe"</span>
+)
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// C 함수 직접 호출</span>
+    result <span class="op">:=</span> C.<span class="fn">add</span>(<span class="num">10</span>, <span class="num">20</span>)
+    <span class="fn">fmt.Println</span>(<span class="str">"C add 결과:"</span>, <span class="tp">int</span>(result))
+
+    <span class="cm">// Go 문자열 → C 문자열 변환</span>
+    name <span class="op">:=</span> <span class="str">"Gopher"</span>
+    cName <span class="op">:=</span> C.<span class="fn">CString</span>(name)       <span class="cm">// C 메모리에 할당</span>
+    <span class="kw">defer</span> C.<span class="fn">free</span>(<span class="tp">unsafe.Pointer</span>(cName)) <span class="cm">// 반드시 해제!</span>
+    C.<span class="fn">greet</span>(cName)
+
+    <span class="cm">// C 문자열 → Go 문자열 변환</span>
+    cStr <span class="op">:=</span> C.<span class="fn">CString</span>(<span class="str">"Hello from C"</span>)
+    <span class="kw">defer</span> C.<span class="fn">free</span>(<span class="op">unsafe.Pointer</span>(cStr))
+    goStr <span class="op">:=</span> C.<span class="fn">GoString</span>(cStr)
+    <span class="fn">fmt.Println</span>(goStr)
+}</pre>
+  </div>
+
+  <h3>외부 C 라이브러리 연동</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">libmath.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="cm">/*
+#cgo LDFLAGS: -lm        // 링커 플래그: libm 수학 라이브러리 연결
+#cgo CFLAGS: -O2 -Wall   // 컴파일러 플래그
+
+#include &lt;math.h&gt;
+
+double fast_sqrt(double x) {
+    return sqrt(x);
+}
+
+// 구조체 사용 예시
+typedef struct {
+    double x;
+    double y;
+} Point;
+
+double distance(Point a, Point b) {
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return sqrt(dx*dx + dy*dy);
+}
+*/</span>
+<span class="kw">import</span> <span class="str">"C"</span>
+
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cm">// C 함수로 제곱근 계산</span>
+    val <span class="op">:=</span> C.<span class="fn">fast_sqrt</span>(<span class="num">144.0</span>)
+    <span class="fn">fmt.Printf</span>(<span class="str">"sqrt(144) = %.1f\n"</span>, <span class="tp">float64</span>(val)) <span class="cm">// 12.0</span>
+
+    <span class="cm">// C 구조체 생성 및 사용</span>
+    p1 <span class="op">:=</span> C.<span class="tp">Point</span>{x: <span class="num">0</span>, y: <span class="num">0</span>}
+    p2 <span class="op">:=</span> C.<span class="tp">Point</span>{x: <span class="num">3</span>, y: <span class="num">4</span>}
+    dist <span class="op">:=</span> C.<span class="fn">distance</span>(p1, p2)
+    <span class="fn">fmt.Printf</span>(<span class="str">"두 점 사이 거리: %.1f\n"</span>, <span class="tp">float64</span>(dist)) <span class="cm">// 5.0</span>
+}</pre>
+  </div>
+
+  <h3>CGo에서 Go 함수를 C에서 호출 (역방향)</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">callback.go</span>
+    </div>
+    <pre><span class="kw">package</span> <span class="pkg">main</span>
+
+<span class="cm">/*
+#include &lt;stdio.h&gt;
+
+// export 주석으로 표시한 Go 함수를 C에서 호출 가능
+extern int goMultiply(int a, int b);
+
+void callGoFromC(int x, int y) {
+    int result = goMultiply(x, y);
+    printf("C가 Go 함수 호출 결과: %d\n", result);
+}
+*/</span>
+<span class="kw">import</span> <span class="str">"C"</span>
+<span class="kw">import</span> <span class="str">"fmt"</span>
+
+<span class="cm">//export goMultiply</span>
+<span class="kw">func</span> <span class="fn">goMultiply</span>(a, b C.<span class="tp">int</span>) C.<span class="tp">int</span> {
+    <span class="fn">fmt.Printf</span>(<span class="str">"Go: %d × %d 계산 중\n"</span>, <span class="tp">int</span>(a), <span class="tp">int</span>(b))
+    <span class="kw">return</span> C.<span class="tp">int</span>(<span class="tp">int</span>(a) <span class="op">*</span> <span class="tp">int</span>(b))
+}
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    C.<span class="fn">callGoFromC</span>(<span class="num">6</span>, <span class="num">7</span>) <span class="cm">// C → Go → C 순서로 호출</span>
+}</pre>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">⚠️ CGo 주의사항</div>
+      <p style="font-size:13px">CGo를 사용하면 크로스 컴파일이 복잡해지고 빌드 속도가 느려집니다. C 메모리(<code>C.CString</code> 등)는 반드시 <code>C.free()</code>로 수동 해제해야 합니다.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 타입 변환 치트시트</div>
+      <p style="font-size:13px"><code>C.int</code> ↔ Go <code>int32</code><br><code>C.long</code> ↔ Go <code>int64</code><br><code>C.CString()</code> : Go→C 문자열<br><code>C.GoString()</code> : C→Go 문자열</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📌 CGo 없는 대안</div>
+      <p style="font-size:13px">순수 Go에서 C 라이브러리를 공유 라이브러리(.so)로 불러오는 <code>syscall.LoadLibrary</code> 또는 <code>purego</code> 라이브러리를 통해 CGo 없이도 FFI가 가능합니다.</p>
+    </div>
+  </div>
+
+  <h3>CGo 빌드 방법</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+      <span class="code-filename">terminal</span>
+    </div>
+    <pre><span class="cm"># 일반 빌드 (CGo 자동 활성화)</span>
+$ go build .
+
+<span class="cm"># CGo 비활성화 (순수 Go 바이너리)</span>
+$ CGO_ENABLED=0 go build .
+
+<span class="cm"># Linux → Windows 크로스 컴파일 (CGo 사용 시 복잡)</span>
+$ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build .
+
+<span class="cm"># CGo 사용 시 크로스 컴파일은 별도 크로스 컴파일러 필요</span>
+$ CC=x86_64-w64-mingw32-gcc GOOS=windows CGO_ENABLED=1 go build .</pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div style="font-size:28px;margin-bottom:14px">🦫</div>
+    <p>Go 언어 공식 문서: <a href="https://go.dev/doc/" target="_blank">go.dev/doc</a> &nbsp;|&nbsp; Tour of Go: <a href="https://go.dev/tour/" target="_blank">go.dev/tour</a></p>
+    <p style="margin-top:8px;font-size:11px;color:#3d5070">Built with ❤️ for Gophers</p>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveal animation
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(el => {
+      if (el.isIntersecting) {
+        el.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.05 });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // Active nav highlight
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    navLinks.forEach(link => {
+      link.style.color = link.getAttribute('href') === `#${current}`
+        ? 'var(--go-blue)'
+        : '';
+    });
+  });
+</script>
+</body>
+</html>
