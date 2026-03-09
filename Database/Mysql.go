@@ -68,6 +68,12 @@ func main() {
 		log.Fatal("DB 조회 결과가 없습니다:", err)
 	}
 	fmt.Printf("회원정보\nID : %d\nName : %s\nEmail : %s\nAge : %d\n", user.ID, user.Name, user.Email, user.Age)
+
+	// 트랜젝션
+	err = transfer(db, 1, 2, 1000)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // NewDB 커넥션 풀 관리
@@ -282,4 +288,56 @@ func preparedSelect(db *sql.DB) error {
 		fmt.Printf("%d: %s\n", id, name)
 	}
 	return rows.Err()
+}
+
+// 계좌 이체 예제 — 원자성 보장 트렌젝션
+func transfer(db *sql.DB, fromID, toID, amount int) error {
+	// 트랜잭션 시작
+	tx, err := db.Begin() // Begin - sql.Tx 객체 생성해줌.
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+
+	// defer로 롤백 보장 — Commit 이후엔 no-op이 됨
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+	}()
+
+	// 출금 계좌에서 차감
+	res, err := tx.Exec(
+		"UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
+		amount, fromID, amount,
+	)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("debit: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		_ = tx.Rollback()
+		return fmt.Errorf("잔액 부족 또는 계좌 없음")
+	}
+
+	// 입금 계좌에 추가
+	if _, err = tx.Exec(
+		"UPDATE accounts SET balance = balance + ? WHERE id = ?",
+		amount, toID,
+	); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("credit: %w", err)
+	}
+
+	// 트랜잭션 로그 기록
+	if _, err = tx.Exec(
+		"INSERT INTO tx_log (from_id, to_id, amount) VALUES (?, ?, ?)",
+		fromID, toID, amount,
+	); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("log: %w", err)
+	}
+
+	// 모든 작업 성공 시 커밋
+	return tx.Commit()
 }

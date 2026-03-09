@@ -601,7 +601,8 @@
   </div>
   <div class="nav-section">
     <div class="nav-section-title">시작하기</div>
-    <a class="nav-link active" href="#intro"><span class="num">01</span> 개요 및 아키텍처</a>
+    <a class="nav-link active" href="#schema"><span class="num">00</span> 학습용 DB 스키마</a>
+    <a class="nav-link" href="#intro"><span class="num">01</span> 개요 및 아키텍처</a>
     <a class="nav-link" href="#install"><span class="num">02</span> 설치 및 연결</a>
     <a class="nav-link" href="#pool"><span class="num">03</span> 커넥션 풀 설정</a>
   </div>
@@ -643,7 +644,7 @@
       타임아웃까지 실무에서 바로 쓸 수 있는 코드 예제와 함께 설명합니다.
     </p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-val">13</span><span class="stat-label">섹션</span></div>
+      <div class="stat"><span class="stat-val">14</span><span class="stat-label">섹션</span></div>
       <div class="stat"><span class="stat-val">40+</span><span class="stat-label">코드 예제</span></div>
       <div class="stat"><span class="stat-val">100%</span><span class="stat-label">표준 라이브러리 기반</span></div>
     </div>
@@ -651,6 +652,209 @@
 
   <!-- CONTENT -->
   <div class="content">
+
+    <!-- 00. 학습용 DB 스키마 -->
+    <div class="section" id="schema">
+      <div class="section-header">
+        <span class="section-num">00</span>
+        <h2 class="section-title">학습용 <span class="accent">DB 스키마</span></h2>
+      </div>
+
+      <p>
+        이 문서의 모든 예제 코드는 아래 스키마를 기준으로 작성되었습니다.
+        MySQL 8.0 이상에서 순서대로 실행하면 모든 예제를 직접 테스트할 수 있습니다.
+      </p>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>실행 방법</strong><br>
+        MySQL 클라이언트(<code>mysql -u root -p</code>) 또는 DBeaver, TablePlus 등 GUI 툴에서
+        아래 SQL 전체를 복사해 한 번에 실행하세요. <code>mydb</code> 데이터베이스가 자동 생성됩니다.</div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">데이터베이스 생성 및 테이블 정의</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">schema.sql</span>
+            <span class="code-lang">sql</span>
+          </div>
+          <pre><span class="cm">-- ────────────────────────────────────────────
+-- 학습용 데이터베이스 생성
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE DATABASE IF NOT EXISTS</span> <span class="vr">mydb</span>
+    <span class="kw">CHARACTER SET</span> utf8mb4
+    <span class="kw">COLLATE</span> utf8mb4_unicode_ci;
+
+<span class="kw">USE</span> <span class="vr">mydb</span>;
+
+<span class="cm">-- ────────────────────────────────────────────
+-- 04, 05, 06, 07, 12, 13 섹션에서 사용
+-- 기본 사용자 테이블
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">users</span> (
+    <span class="vr">id</span>         <span class="tp">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">name</span>       <span class="tp">VARCHAR(100)</span>     <span class="kw">NOT NULL</span>,
+    <span class="vr">email</span>      <span class="tp">VARCHAR(255)</span>     <span class="kw">NOT NULL</span>,
+    <span class="vr">age</span>        <span class="tp">INT</span>              <span class="kw">NOT NULL DEFAULT</span> <span class="nm">0</span>,
+    <span class="vr">status</span>     <span class="tp">VARCHAR(20)</span>      <span class="kw">NOT NULL DEFAULT</span> <span class="st">'active'</span>,
+    <span class="vr">created_at</span> <span class="tp">DATETIME</span>         <span class="kw">NOT NULL DEFAULT</span> <span class="fn">CURRENT_TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>),
+    <span class="kw">UNIQUE KEY</span> <span class="vr">uq_email</span> (<span class="vr">email</span>)   <span class="cm">-- 12섹션 중복키 에러(1062) 예제용</span>
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- ────────────────────────────────────────────
+-- 09 섹션에서 사용
+-- NULL 허용 컬럼이 포함된 프로필 테이블
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">profiles</span> (
+    <span class="vr">id</span>       <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">name</span>     <span class="tp">VARCHAR(100)</span>    <span class="kw">NOT NULL</span>,
+    <span class="vr">bio</span>      <span class="tp">TEXT</span>                    <span class="kw">NULL</span>,   <span class="cm">-- sql.NullString</span>
+    <span class="vr">age</span>      <span class="tp">INT</span>                     <span class="kw">NULL</span>,   <span class="cm">-- sql.NullInt64</span>
+    <span class="vr">score</span>    <span class="tp">DOUBLE</span>                  <span class="kw">NULL</span>,   <span class="cm">-- sql.NullFloat64</span>
+    <span class="vr">verified</span> <span class="tp">TINYINT(1)</span>              <span class="kw">NULL</span>,   <span class="cm">-- sql.NullBool</span>
+    <span class="vr">birthday</span> <span class="tp">DATETIME</span>                <span class="kw">NULL</span>,   <span class="cm">-- sql.NullTime</span>
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- ────────────────────────────────────────────
+-- 08 섹션에서 사용
+-- 계좌 이체 트랜잭션 예제용 테이블
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">accounts</span> (
+    <span class="vr">id</span>      <span class="tp">BIGINT UNSIGNED</span>    <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">name</span>    <span class="tp">VARCHAR(100)</span>       <span class="kw">NOT NULL</span>,
+    <span class="vr">balance</span> <span class="tp">DECIMAL(15, 2)</span>     <span class="kw">NOT NULL DEFAULT</span> <span class="nm">0.00</span>,
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>),
+    <span class="kw">CONSTRAINT</span> <span class="vr">chk_balance</span> <span class="kw">CHECK</span> (<span class="vr">balance</span> >= <span class="nm">0</span>)  <span class="cm">-- 잔액 음수 방지</span>
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- ────────────────────────────────────────────
+-- 08 섹션에서 사용
+-- 이체 이력 로그 테이블
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">tx_log</span> (
+    <span class="vr">id</span>         <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">from_id</span>    <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL</span>,
+    <span class="vr">to_id</span>      <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL</span>,
+    <span class="vr">amount</span>     <span class="tp">DECIMAL(15, 2)</span>  <span class="kw">NOT NULL</span>,
+    <span class="vr">created_at</span> <span class="tp">DATETIME</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="fn">CURRENT_TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>),
+    <span class="kw">CONSTRAINT</span> <span class="vr">fk_txlog_from</span> <span class="kw">FOREIGN KEY</span> (<span class="vr">from_id</span>) <span class="kw">REFERENCES</span> <span class="vr">accounts</span>(<span class="vr">id</span>),
+    <span class="kw">CONSTRAINT</span> <span class="vr">fk_txlog_to</span>   <span class="kw">FOREIGN KEY</span> (<span class="vr">to_id</span>)   <span class="kw">REFERENCES</span> <span class="vr">accounts</span>(<span class="vr">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- ────────────────────────────────────────────
+-- 08 섹션에서 사용
+-- 주문 / 주문 상품 테이블 (WithTx 예제)
+-- ────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">orders</span> (
+    <span class="vr">id</span>         <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">user_id</span>    <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL</span>,
+    <span class="vr">total</span>      <span class="tp">DECIMAL(15, 2)</span>  <span class="kw">NOT NULL DEFAULT</span> <span class="nm">0.00</span>,
+    <span class="vr">created_at</span> <span class="tp">DATETIME</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="fn">CURRENT_TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>),
+    <span class="kw">CONSTRAINT</span> <span class="vr">fk_orders_user</span> <span class="kw">FOREIGN KEY</span> (<span class="vr">user_id</span>) <span class="kw">REFERENCES</span> <span class="vr">users</span>(<span class="vr">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="kw">CREATE TABLE IF NOT EXISTS</span> <span class="vr">order_items</span> (
+    <span class="vr">id</span>         <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+    <span class="vr">order_id</span>   <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL</span>,
+    <span class="vr">product_id</span> <span class="tp">BIGINT UNSIGNED</span> <span class="kw">NOT NULL</span>,
+    <span class="vr">qty</span>        <span class="tp">INT</span>             <span class="kw">NOT NULL DEFAULT</span> <span class="nm">1</span>,
+    <span class="kw">PRIMARY KEY</span> (<span class="vr">id</span>),
+    <span class="kw">CONSTRAINT</span> <span class="vr">fk_items_order</span> <span class="kw">FOREIGN KEY</span> (<span class="vr">order_id</span>) <span class="kw">REFERENCES</span> <span class="vr">orders</span>(<span class="vr">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;</pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">샘플 데이터 INSERT</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            <span class="code-filename">seed.sql</span>
+            <span class="code-lang">sql</span>
+          </div>
+          <pre><span class="kw">USE</span> <span class="vr">mydb</span>;
+
+<span class="cm">-- users 샘플 데이터</span>
+<span class="kw">INSERT INTO</span> <span class="vr">users</span> (<span class="vr">name</span>, <span class="vr">email</span>, <span class="vr">age</span>, <span class="vr">status</span>) <span class="kw">VALUES</span>
+    (<span class="st">'김철수'</span>, <span class="st">'chulsoo@example.com'</span>, <span class="nm">28</span>, <span class="st">'active'</span>),
+    (<span class="st">'이영희'</span>, <span class="st">'younghee@example.com'</span>, <span class="nm">34</span>, <span class="st">'active'</span>),
+    (<span class="st">'박민준'</span>, <span class="st">'minjun@example.com'</span>,  <span class="nm">17</span>, <span class="st">'inactive'</span>),  <span class="cm">-- age <= 18 필터 테스트용</span>
+    (<span class="st">'최수진'</span>, <span class="st">'soojin@example.com'</span>,  <span class="nm">22</span>, <span class="st">'active'</span>),
+    (<span class="st">'정태현'</span>, <span class="st">'taehyun@example.com'</span>, <span class="nm">45</span>, <span class="st">'active'</span>);
+
+<span class="cm">-- profiles 샘플 데이터 (NULL 컬럼 포함)</span>
+<span class="kw">INSERT INTO</span> <span class="vr">profiles</span> (<span class="vr">name</span>, <span class="vr">bio</span>, <span class="vr">age</span>, <span class="vr">score</span>, <span class="vr">verified</span>, <span class="vr">birthday</span>) <span class="kw">VALUES</span>
+    (<span class="st">'김철수'</span>, <span class="st">'Go 개발자입니다.'</span>, <span class="nm">28</span>,  <span class="nm">9.5</span>,  <span class="nm">1</span>,    <span class="st">'1996-03-15 00:00:00'</span>),
+    (<span class="st">'이영희'</span>, <span class="kw">NULL</span>,               <span class="nm">34</span>,  <span class="kw">NULL</span>, <span class="nm">1</span>,    <span class="st">'1990-07-22 00:00:00'</span>),  <span class="cm">-- bio, score NULL</span>
+    (<span class="st">'박민준'</span>, <span class="st">'학생입니다.'</span>,        <span class="kw">NULL</span>, <span class="nm">7.2</span>,  <span class="kw">NULL</span>, <span class="kw">NULL</span>);                   <span class="cm">-- age, verified, birthday NULL</span>
+
+<span class="cm">-- accounts 샘플 데이터 (이체 트랜잭션 예제용)</span>
+<span class="kw">INSERT INTO</span> <span class="vr">accounts</span> (<span class="vr">name</span>, <span class="vr">balance</span>) <span class="kw">VALUES</span>
+    (<span class="st">'김철수'</span>, <span class="nm">1000000.00</span>),  <span class="cm">-- id=1, 잔액 100만원</span>
+    (<span class="st">'이영희'</span>,  <span class="nm">500000.00</span>);  <span class="cm">-- id=2, 잔액 50만원</span></pre>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">테이블 관계 (ERD 요약)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>테이블</th><th>주요 컬럼</th><th>관계</th><th>사용 섹션</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>users</code></td>
+                <td>id, name, email, age, status</td>
+                <td>— (루트 테이블)</td>
+                <td>04, 05, 06, 07, 12, 13</td>
+              </tr>
+              <tr>
+                <td><code>profiles</code></td>
+                <td>id, name, bio(NULL), age(NULL), score(NULL), verified(NULL), birthday(NULL)</td>
+                <td>독립 테이블</td>
+                <td>09</td>
+              </tr>
+              <tr>
+                <td><code>accounts</code></td>
+                <td>id, name, balance</td>
+                <td>— (루트 테이블)</td>
+                <td>08 (이체 예제)</td>
+              </tr>
+              <tr>
+                <td><code>tx_log</code></td>
+                <td>id, from_id, to_id, amount</td>
+                <td>accounts(from_id, to_id)</td>
+                <td>08 (이체 예제)</td>
+              </tr>
+              <tr>
+                <td><code>orders</code></td>
+                <td>id, user_id, total</td>
+                <td>users(user_id)</td>
+                <td>08 (WithTx 예제)</td>
+              </tr>
+              <tr>
+                <td><code>order_items</code></td>
+                <td>id, order_id, product_id, qty</td>
+                <td>orders(order_id)</td>
+                <td>08 (WithTx 예제)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>테이블 초기화가 필요하다면</strong><br>
+        재실행 전에 <code>DROP TABLE IF EXISTS order_items, orders, tx_log, accounts, profiles, users;</code>
+        를 먼저 실행하세요. 외래키 제약 때문에 참조되는 테이블을 자식 테이블보다 나중에 삭제해야 합니다.</div>
+      </div>
+    </div>
 
     <!-- 01. 개요 -->
     <div class="section" id="intro">
