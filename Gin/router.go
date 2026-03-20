@@ -130,6 +130,10 @@ func main() {
 	*/
 	r.POST("/upload", func(c *gin.Context) {
 		// 폼에서 파일 가져오기
+		//# 파일 업로드
+		//curl -X POST http://localhost:8080/upload \
+		//-F "file=@test.txt"
+
 		file, err := c.FormFile("file")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -153,7 +157,13 @@ func main() {
 
 	//배열 반환시 JSON 하이체킹 방지 응답은 JSON 배열 그대로 반환하면 털림. 객체로 감사서 "data" : [] 이런식으로 해야함
 	r.GET("/data", func(c *gin.Context) {
-		c.SecureJSON(http.StatusOK, []string{"a", "b", "c"})
+		c.SecureJSON(http.StatusOK, User1{
+			ID:   0,
+			Name: "eqwe",
+			Address: Address{
+				City:    "Seoul",
+				Country: "Korea"},
+		})
 	})
 
 	// JSON HTML 이스케이프 후 반환
