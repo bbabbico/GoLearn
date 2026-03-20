@@ -183,7 +183,7 @@ func main() {
 	})
 
 	// GET 파라미터
-	r.GET("/users/:userId/posts/:/*name", func(c *gin.Context) { // : 는 해당 위치의 값을 파라미터로 받음. * 는 그 위치 부터 뒤에 모든것을 파라미터로 받음. ex) /name/qwe/eeee에 접속하면 name은 /qwe/eeee
+	r.GET("/userss/:userId/posts/*name", func(c *gin.Context) { // : 는 해당 위치의 값을 파라미터로 받음. * 는 그 위치 부터 뒤에 모든것을 파라미터로 받음. ex) /name/qwe/eeee에 접속하면 name은 /qwe/eeee
 		userId := c.Param("userId")
 		postId := c.Param("postId")
 
