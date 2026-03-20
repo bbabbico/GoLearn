@@ -6,3 +6,6 @@ go run main
 
 Race Detector (동기화 문제 확인)
 go run -race 파일.go
+
+go get github.com/joho/godotenv
+go get github.com/sashabaranov/go-openai
